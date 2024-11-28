@@ -1,6 +1,8 @@
 # InverseKinematics_v1
 KinIn is a framework designed for the iterative kinematic analysis of mechanical systems. The primary objective of the software is to assess the feasibility of performing robotic calculations for complex mechanisms, particularly those with more than five degrees of freedom in heavy machinery. The approach employed relies on iterative computation methods rather than traditional analytical techniques to achieve the desired results.
 
+![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/b4520f9d2a56410a5587972f90c99d417a006dca/IDE.png)
+
 ## Requirements
 Oscat BASIC
 
@@ -15,9 +17,9 @@ isValueNegligible & Evaluates whether the quantity is negligible.\\
 MatMul & Matrix multiplication.\\
 
 Mat\_byScalar & Matrix multiplication by a scalar.\\
-\hline
+
 norm & Computes the norm of a matrix.\\
-\hline
+
 Trace & Trace of a matrix.\\
 
 ## InverseFunctions
