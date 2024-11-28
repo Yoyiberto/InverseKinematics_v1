@@ -4,6 +4,9 @@ KinIn is a framework designed for the iterative kinematic analysis of mechanical
 ## Requirements
 Oscat BASIC
 
+## Recommended environment
+Codesys V3.5 SP19 
+
 ## linear algebra
 Eye & Gets identity matrix.\\
 
