@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:24:05.1029997" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="expToRotAxisAndAngle" pouType="functionBlock">
+        <interface>
+          <localVars>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="norm">
+              <type>
+                <derived name="norm" />
+              </type>
+            </variable>
+            <variable name="norm_expc3">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+          </localVars>
+          <inputVars>
+            <variable name="expc3">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="1" />
+                  </Attributes>
+                </data>
+              </addData>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">vector</xhtml>
+              </documentation>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="omghat">
+              <type>
+                <array>
+                  <dimension lower="1" upper="3" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">scalar</xhtml>
+              </documentation>
+            </variable>
+            <variable name="theta">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+          </outputVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">norm(vector:=expc3,
+		normValue=&gt;theta);
+FOR i:= 1 TO UPPER_BOUND(expc3,1)DO
+	omghat[i] :=expc3[i]/theta;
+END_FOR
+</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>d990abe4-f414-4e3d-bd9b-bd04ff6243b3</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="JacobianFunctions">
+          <Object Name="expToRotAxisAndAngle" ObjectId="d990abe4-f414-4e3d-bd9b-bd04ff6243b3" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:28:46.9120419" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="RndStart" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="ar_JointLimits">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nJoints" />
+                  <dimension lower="1" upper="2" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="randomArray">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nJoints" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">RndFunc:RDM;//OSCAT_BASIC.RDM;</xhtml>
+              </documentation>
+            </variable>
+            <variable name="rndNum">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="rndNum_scaled">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="maxVal">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="minVal">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="scale">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="meanVal">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">//robot limits in  degrees
+//give lenghts and create the Vb for forward and bacward 
+rndNum:=0;
+FOR i:=1 TO GVL.nJoints DO
+	maxVal:=ar_JointLimits[i,2];
+	minVal:=ar_JointLimits[i,1];
+	scale:=maxVal-minVal;
+	meanVal:=(ar_JointLimits[i,2]+ar_JointLimits[i,1])/2;
+	
+	rndNum:=OSCAT_BASIC.RDM(last:=rndNum );
+	rndNum_scaled:=rndNum*scale+meanVal;
+	
+	randomArray[i]:=rndNum_scaled;
+END_FOR
+
+
+
+
+</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>6def2022-af6a-46ac-b48c-56a1f25094cd</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="Mechanism">
+          <Object Name="RndStart" ObjectId="6def2022-af6a-46ac-b48c-56a1f25094cd" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

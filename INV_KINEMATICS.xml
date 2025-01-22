@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:28:35.4990452" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="INV_KINEMATICS" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="M">
+              <type>
+                <array>
+                  <dimension lower="1" upper="4" />
+                  <dimension lower="1" upper="4" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+            <variable name="T">
+              <type>
+                <array>
+                  <dimension lower="1" upper="4" />
+                  <dimension lower="1" upper="4" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+            <variable name="eomg">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="ev">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="nIterationsIK">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="Blist">
+              <type>
+                <array>
+                  <dimension lower="1" upper="6" />
+                  <dimension lower="1" upper="GVL.nJoints" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="thetalist">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nJoints" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">as output</xhtml>
+              </documentation>
+            </variable>
+            <variable name="q_IKsuccess">
+              <type>
+                <BOOL />
+              </type>
+            </variable>
+            <variable name="s_IK_message">
+              <type>
+                <string />
+              </type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="RndStart">
+              <type>
+                <derived name="RndStart" />
+              </type>
+            </variable>
+            <variable name="getInvKinematics_Body">
+              <type>
+                <derived name="getInvKinematics_Body" />
+              </type>
+            </variable>
+            <variable name="success">
+              <type>
+                <BOOL />
+              </type>
+            </variable>
+            <variable name="i_iteration">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="q_JointOK">
+              <type>
+                <BOOL />
+              </type>
+            </variable>
+            <variable name="thetalist0">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nJoints" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">	(*-----------for various iterations of IK---------*)
+//random start with compliant joint limits
+i_iteration:=0;q_IKsuccess:=FALSE;
+WHILE (i_iteration&lt;nIterationsIK	 AND  q_IKsuccess=FALSE) DO
+	RndStart(ar_JointLimits:=GVL.ar_JointLimits , randomArray=&gt;thetalist0 );	
+	
+	getInvKinematics_Body(
+		M:=M , 
+		T:=T , 
+		eomg:= eomg, 
+		ev:= ev, 
+		Blist:=Blist , 
+		thetalist0:= thetalist0, 
+		thetalist:=thetalist , 
+		success=&gt; success);	
+	
+	i:=1;q_JointOK:=TRUE;q_IKsuccess:=TRUE;
+	FOR i:=1 TO UPPER_BOUND(thetalist,1) DO	
+		q_JointOK:=GVL.ar_JointLimits[i,1]&lt;=thetalist[i] AND thetalist[i]&lt;=GVL.ar_JointLimits[i,2];
+		IF q_JointOK=FALSE THEN
+			q_IKsuccess:=FALSE;
+		END_IF
+	END_FOR
+	i_iteration:=i_iteration+1;
+END_WHILE
+
+IF (i_iteration&gt;=nIterationsIK	 AND  q_IKsuccess=FALSE) THEN
+	s_IK_message:='Could not solve the inverse kinematics';
+ELSE
+	s_IK_message:='The inverse kinematics was completed';
+END_IF</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>07958019-2366-4572-aab9-7f41ade26769</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="Mechanism">
+          <Object Name="INV_KINEMATICS" ObjectId="07958019-2366-4572-aab9-7f41ade26769" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

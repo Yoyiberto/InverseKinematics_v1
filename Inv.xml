@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:18:42.0738422" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="Inv" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="matSquare">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="InverseMatrix">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="LuDecomposition">
+              <type>
+                <derived name="LuDecomposition" />
+              </type>
+            </variable>
+            <variable name="Eye">
+              <type>
+                <derived name="Eye" />
+              </type>
+            </variable>
+            <variable name="LuInverse">
+              <type>
+                <derived name="LuInverse" />
+              </type>
+            </variable>
+            <variable name="L">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">LU factor same size input matrix</xhtml>
+              </documentation>
+            </variable>
+            <variable name="U">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+            <variable name="d">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+            <variable name="eyeN">
+              <type>
+                <array>
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <dimension lower="1" upper="GVL.nInvSize" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">LuDecomposition(A:=matSquare , 
+		L:= L, U:= U);
+		
+Eye(eye:= eyeN);
+
+LuInverse(
+	L:= L, 
+	u:= U, 
+	a:= InverseMatrix, 
+	d:= d, 
+	eyeN:= eyeN);</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>40c15dee-f33d-44db-a67f-7cee70670ad6</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="Inverse">
+          <Object Name="Inv" ObjectId="40c15dee-f33d-44db-a67f-7cee70670ad6" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

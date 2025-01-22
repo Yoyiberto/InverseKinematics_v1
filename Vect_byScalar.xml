@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:27:59.8633225" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="Vect_byScalar" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Vector">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="1" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+          </inputVars>
+          <inOutVars>
+            <variable name="scalar">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+          </inOutVars>
+          <inputVars>
+            <variable name="VectorByScalar">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="1" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+          </inputVars>
+          <localVars>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">FOR i:=1 TO UPPER_BOUND(Vector,1) DO
+	VectorByScalar[i]:=Vector[i]*scalar;
+
+END_FOR</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>c192ccb0-7f1b-4dd4-850e-3c32f76eaf7b</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="LinearAlgebra">
+          <Object Name="Vect_byScalar" ObjectId="c192ccb0-7f1b-4dd4-850e-3c32f76eaf7b" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

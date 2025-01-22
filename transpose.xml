@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:27:50.975359" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="transpose" pouType="functionBlock">
+        <interface>
+          <localVars>
+            <variable name="t_count1_i">
+              <type>
+                <DINT />
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">-------------</xhtml>
+              </documentation>
+            </variable>
+            <variable name="t_count1_j">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+          </localVars>
+          <inputVars>
+            <variable name="B">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="Bt">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+          </inputVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">
+//----creating the code for the transpose--------
+FOR t_count1_i:=LOWER_BOUND(B,1) TO UPPER_BOUND(B,1) DO
+	FOR t_count1_j:=LOWER_BOUND(B,2) TO UPPER_BOUND(B,2) DO
+		Bt[t_count1_j,t_count1_i]:=B[t_count1_i,t_count1_j];//transpose the indexes
+	END_FOR
+	
+END_FOR</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>5da51b67-745f-494e-baa6-650082dcf601</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="LinearAlgebra">
+          <Object Name="transpose" ObjectId="5da51b67-745f-494e-baa6-650082dcf601" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

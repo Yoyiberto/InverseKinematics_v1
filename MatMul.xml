@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:27:25.9240719" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="MatMul" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="mat1">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="mat2">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="MatResult">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+          </inputVars>
+          <localVars>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="j">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="k">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">FOR i:=1 TO UPPER_BOUND(MatResult,1) DO
+	FOR j:=1 TO UPPER_BOUND(MatResult,2) DO
+		MatResult[i,j]:=0;
+		FOR k:=1 TO UPPER_BOUND(mat2,1) DO//dimmension not appering in result
+			MatResult[i,j]:=MatResult[i,j]+mat1[i,k]*mat2[k,j];
+		END_FOR;
+	END_FOR
+END_FOR</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>98bf4ecb-ea86-45aa-9a4f-080bd7625657</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="LinearAlgebra">
+          <Object Name="MatMul" ObjectId="98bf4ecb-ea86-45aa-9a4f-080bd7625657" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

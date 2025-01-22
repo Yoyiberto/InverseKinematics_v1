@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:22:07.2595442" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="LuDecomposition" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="A">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="L">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="U">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+          </inputVars>
+          <localVars>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="j">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="k">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="u_SumTemp">
+              <type>
+                <REAL />
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">using temporal variables for more clarity</xhtml>
+              </documentation>
+            </variable>
+            <variable name="l_SumTemp">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">//initialize both arrays as 0
+i:=1;j:=1;
+FOR i:=1 TO UPPER_BOUND(L,1) DO
+	FOR j:=1 TO UPPER_BOUND(L,2) DO
+		L[i,j]:=0;
+		U[i,j]:=0;
+	END_FOR
+END_FOR
+
+i:=1;j:=1;
+FOR i:=1 TO UPPER_BOUND(L,1) DO
+	FOR j:=1 TO UPPER_BOUND(L,2) DO
+		
+	//j only oparates when is greater or equal than 1
+		IF (j&gt;=i) THEN
+			u_SumTemp:=0;k:=1;
+			FOR k:=1 TO i-1 DO
+				u_SumTemp:=u_SumTemp+L[i,k]*U[k,j];
+			END_FOR
+			U[i,j]:=A[i,j]-u_SumTemp;//the complex formula for it
+			
+			IF j=i THEN
+				L[j,i]:=1;
+			ELSE //(j&lt;&gt;i)
+				l_SumTemp:=0;k:=1;
+				FOR k:=1 TO i-1 DO
+					l_SumTemp:=l_SumTemp+L[j,k]*U[k,i];
+				END_FOR
+				//the complex formula
+				IF U[i,i]=0 AND (A[j,i]-l_SumTemp)=0 THEN
+					L[j,i]:=1;
+				ELSIF U[i,i]=0 THEN
+					L[j,i]:=3.402823E+10;
+				ELSE
+					L[j,i]:=(A[j,i]-l_SumTemp)/U[i,i];//the complex formula
+				END_IF
+		
+
+			END_IF
+		END_IF
+	//the rest of values are zeros
+	END_FOR
+END_FOR</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>c4ecfbf4-750e-47f6-86ca-07626dffc609</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="Inverse">
+          <Object Name="LuDecomposition" ObjectId="c4ecfbf4-750e-47f6-86ca-07626dffc609" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

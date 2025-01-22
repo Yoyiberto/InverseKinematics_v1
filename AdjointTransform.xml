@@ -1,0 +1,191 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:23:00.4437358" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="AdjointTransform" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="Transform4x4">
+              <type>
+                <array>
+                  <dimension lower="1" upper="4" />
+                  <dimension lower="1" upper="4" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">trasnform 4x4</xhtml>
+              </documentation>
+            </variable>
+          </inputVars>
+          <outputVars>
+            <variable name="AdT">
+              <type>
+                <array>
+                  <dimension lower="1" upper="6" />
+                  <dimension lower="1" upper="6" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">6x6 matrix</xhtml>
+              </documentation>
+            </variable>
+          </outputVars>
+          <localVars>
+            <variable name="angVelToSkewSymMatrix">
+              <type>
+                <derived name="angVelToSkewSymMatrix" />
+              </type>
+            </variable>
+            <variable name="MatMul">
+              <type>
+                <derived name="MatMul" />
+              </type>
+            </variable>
+            <variable name="TransSE3_ToRotAndPos">
+              <type>
+                <derived name="TransSE3_ToRotAndPos" />
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">function</xhtml>
+              </documentation>
+            </variable>
+            <variable name="RotMat">
+              <type>
+                <array>
+                  <dimension lower="1" upper="3" />
+                  <dimension lower="1" upper="3" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">rotation matrix</xhtml>
+              </documentation>
+            </variable>
+            <variable name="p">
+              <type>
+                <array>
+                  <dimension lower="1" upper="3" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+              <documentation>
+                <xhtml xmlns="http://www.w3.org/1999/xhtml">position array</xhtml>
+              </documentation>
+            </variable>
+            <variable name="i">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="j">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="so3mat">
+              <type>
+                <array>
+                  <dimension lower="1" upper="3" />
+                  <dimension lower="1" upper="3" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+            <variable name="MatResult">
+              <type>
+                <array>
+                  <dimension lower="1" upper="3" />
+                  <dimension lower="1" upper="3" />
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </array>
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">TransSE3_ToRotAndPos(T:=Transform4x4 ,
+		 RotMat=&gt; RotMat, p=&gt;p );
+
+i:=1;j:=1;
+FOR i:=1 TO 3 DO
+	FOR j:=1 TO 3 DO
+		AdT[i,j]:=Transform4x4[i,j];//equals to RotMatrix
+		AdT[i+3,j+3]:=Transform4x4[i,j];//equals to RotMatrix
+		AdT[i,j+3]:=0;//assigning that part to zeros
+	END_FOR
+END_FOR
+
+angVelToSkewSymMatrix(omg:= p, so3mat=&gt; so3mat);
+
+MatMul(mat1:=so3mat , mat2:=RotMat , 
+		MatResult:=MatResult );
+i:=1;j:=1;
+FOR i:=1 TO 3 DO
+	FOR j:=1 TO 3 DO
+		AdT[i+3,j]:=MatResult[i,j];//equals to RotMatrix
+	END_FOR
+END_FOR
+
+
+
+
+
+</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>3d1c5d44-2005-42f3-a276-7d95d4dc5435</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="JacobianFunctions">
+          <Object Name="AdjointTransform" ObjectId="3d1c5d44-2005-42f3-a276-7d95d4dc5435" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>

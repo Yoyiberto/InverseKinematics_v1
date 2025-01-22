@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0200">
+  <fileHeader companyName="" productName="CODESYS" productVersion="CODESYS V3.5 SP19" creationDateTime="2025-01-20T16:22:26.8299642" />
+  <contentHeader name="KinIn_v3.project" modificationDateTime="2025-01-20T16:17:39.6822999">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="1" y="1" />
+      </fbd>
+      <ld>
+        <scaling x="1" y="1" />
+      </ld>
+      <sfc>
+        <scaling x="1" y="1" />
+      </sfc>
+    </coordinateInfo>
+    <addData>
+      <data name="http://www.3s-software.com/plcopenxml/projectinformation" handleUnknown="implementation">
+        <ProjectInformation />
+      </data>
+    </addData>
+  </contentHeader>
+  <types>
+    <dataTypes />
+    <pous>
+      <pou name="LuInverse" pouType="functionBlock">
+        <interface>
+          <inputVars>
+            <variable name="L">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="u">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="a">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="d">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+            <variable name="eyeN">
+              <type>
+                <pointer>
+                  <baseType>
+                    <REAL />
+                  </baseType>
+                </pointer>
+              </type>
+              <addData>
+                <data name="http://www.3s-software.com/plcopenxml/attributes" handleUnknown="implementation">
+                  <Attributes>
+                    <Attribute Name="variable_length_array_original_scope" Value="Inout" />
+                    <Attribute Name="variable_length_array" Value="ARRAY[*,*] OF REAL" />
+                    <Attribute Name="Dimensions" Value="2" />
+                  </Attributes>
+                </data>
+              </addData>
+            </variable>
+          </inputVars>
+          <localVars>
+            <variable name="row">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="col">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="m">
+              <type>
+                <DINT />
+              </type>
+            </variable>
+            <variable name="sumTemp_2">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+            <variable name="sumTemp_d">
+              <type>
+                <REAL />
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml xmlns="http://www.w3.org/1999/xhtml">FOR col:=1 TO UPPER_BOUND(L,1) DO
+    row:=1;
+    for row:=1 TO UPPER_BOUND(L,1) DO
+        //forward substitution
+        m:=1;sumTemp_d:=0;
+        for m:=1 TO row-1 DO
+            sumTemp_d:=sumTemp_d+L[row,m]*d[m,col];
+        end_for    
+        d[row,col]:=eyeN[row,col]-sumTemp_d;
+    end_for
+
+    //backward substitution
+    row:=UPPER_BOUND(L,1);
+    FOR row:=UPPER_BOUND(L,1) TO 1 BY -1 DO
+        m:=UPPER_BOUND(L,1);sumTemp_2:=0;
+        FOR m:=UPPER_BOUND(L,1) TO row+1 BY -1 DO
+            sumTemp_2:=sumTemp_2+u[row,m]*a[m,col];
+        end_for    
+        
+		IF u[row,row]=0 AND (d[row,col]-sumTemp_2)=0 THEN
+			a[row,col]:=1;
+		ELSIF u[row,row]=0 THEN
+			a[row,col]:=3.402823E+10;
+		ELSE
+			a[row,col]:=(d[row,col]-sumTemp_2)/u[row,row];
+		END_IF
+		
+    end_for
+end_for</xhtml>
+          </ST>
+        </body>
+        <addData>
+          <data name="http://www.3s-software.com/plcopenxml/objectid" handleUnknown="discard">
+            <ObjectId>13b525f7-68fb-4e17-a3a1-fe35f39ea101</ObjectId>
+          </data>
+        </addData>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations />
+  </instances>
+  <addData>
+    <data name="http://www.3s-software.com/plcopenxml/projectstructure" handleUnknown="discard">
+      <ProjectStructure>
+        <Folder Name="Inverse">
+          <Object Name="LuInverse" ObjectId="13b525f7-68fb-4e17-a3a1-fe35f39ea101" />
+        </Folder>
+      </ProjectStructure>
+    </data>
+  </addData>
+</project>
