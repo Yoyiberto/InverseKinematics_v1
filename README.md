@@ -2,6 +2,7 @@
 
 ## **1. Project Description**  
 KinIn is a framework designed for the iterative kinematic analysis of mechanical systems. The primary objective of the software is to assess the feasibility of performing robotic calculations for complex mechanisms, particularly those with more than five degrees of freedom in heavy machinery. The approach employed relies on iterative computation methods rather than traditional analytical techniques to achieve the desired results.
+
 This repository contains the files from the framework in Structured Text. Additionally, in the MATLAB directory it includes a complementary example for better visualization and exploration of the mechanism in MATLAB.
 
 ![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/b4520f9d2a56410a5587972f90c99d417a006dca/IDE.png)
@@ -19,12 +20,14 @@ For MATLAB, the code requires the Robotics System Toolbox.
 ## **4. Installation & Setup**  
 ### COODESYS
 - Confirm that CODESYS V3.5 is installed. If it is not installed, it can be downloaded from its official website.
--Install the library OSCAT BASIC 3.3.4.0. The library file is included in this repository as a complementary file with the name ‘BASIC.library’. Alternatively, it can be found on CODESYS official website.
+- Install the library OSCAT BASIC 3.3.4.0. The library file is included in this repository as a complementary file with the name ‘BASIC.library’. Alternatively, it can be found on CODESYS official website.
+
 To install the library using ‘BASIC.library’ click on the Tools tab inside CODESYS IDE. The click in Library Repository and Install. Also, it can be installed through CODESYS Installer.
 
 ### MATLAB:
 Confirm that MATLAB is installed or use MATLAB online.
 Confirm that the Robotics system toolbox is installed. If not, use the addons tab to install it. 
+
 The MATLAB folder in this repository contains the mechanism’s STL meshes insider the meshes folder. The urdf file for the robot description and the ‘import_robot.m’.
 2 screenshots of the example positions were taken and are also included in the folder. The positions can be easily modified by changing the angles.
 
@@ -38,7 +41,8 @@ For getting a better visual understanding and a comprobation of the results from
 
 ### **6. Demonstration & Examples**  
    - Screenshots or a step-by-step video (if possible).  
-   - Example scenarios for using the project.  
+   - Example scenarios for using the project.
+
 The example given is about one of the real mechanisms in which the framework was tested. 
 It can be tested in other mechanisms. As long as the numerical values are ... One key point is having the ...V matrix for the description in codesys.
 
