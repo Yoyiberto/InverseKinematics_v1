@@ -1,6 +1,6 @@
 # InverseKinematics_v1
 
-## **1. Project Title and Description**  
+## **1. Project Description**  
 KinIn is a framework designed for the iterative kinematic analysis of mechanical systems. The primary objective of the software is to assess the feasibility of performing robotic calculations for complex mechanisms, particularly those with more than five degrees of freedom in heavy machinery. The approach employed relies on iterative computation methods rather than traditional analytical techniques to achieve the desired results.
 This repository contains the files from the framework in Structured Text. Additionally, in the MATLAB directory it includes a complementary example for better visualization and exploration of the mechanism in MATLAB.
 
