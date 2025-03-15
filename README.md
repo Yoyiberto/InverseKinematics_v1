@@ -20,7 +20,7 @@ For the complete description and examples on how to use the functions, please ch
 The recommended environment is CODESYS V3.5 SP20 with the library OSCAT BASIC installed.
 For MATLAB, the code requires the Robotics System Toolbox. 
 ## **4. Installation & Setup**  
-### COODESYS:
+### CODESYS:
 - Confirm that CODESYS V3.5 is installed. If it is not installed, it can be downloaded from its official website.
 - Install the library OSCAT BASIC 3.3.4.0. The library file is included in this repository as a complementary file with the name ‘BASIC.library’. Alternatively, it can be found on CODESYS official website.
 
@@ -32,15 +32,15 @@ Confirm that the Robotics system toolbox is installed. If not, use the addons ta
 The folder named MATLAB contains all the important files for running the Matlab demonstration.
 
 ## **5. Usage Guide**  
-###  Running the CODESYS project.  
+### CODESYS:
 The idea of the framework is to integrate more complex workflows. For this repository all the files and functions are explicitly laid. Furthermore, the example inside the CODESYS project is given by the following:
 PLC_PRG uses the ‘INV KIN’ function to calculate which angles are necessary to get to the arbitrary position (given by the 4x4 matrix T). The function will give the answer position in the ‘thetalist’.
 
-###  Running the MATLAB GUI and connecting it to CODESYS.  
+### MATLAB: 
 For getting a better visual understanding and a comprobation of the results from codesys, we can run the ‘code.m’ to ensure that the results are the same and how will the mechanism look in real life.
 
 ### **6. Demonstration & Examples**  
-### COODESYS:
+### CODESYS:
 There are examples for all the functions included in the framework. There is one example about one of the real mechanisms in which the framework was tested. 
 ### MATLAB:
 The MATLAB folder in this repository contains the mechanism’s STL meshes insider the meshes folder. The urdf file for the robot description and the ‘import_robot.m’.
