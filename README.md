@@ -5,13 +5,14 @@ KinIn is a framework designed for the iterative kinematic analysis of mechanical
 
 This repository contains the files from the framework in Structured Text. Additionally, in the MATLAB directory it includes a complementary example for better visualization and exploration of the mechanism in MATLAB.
 
-![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/b4520f9d2a56410a5587972f90c99d417a006dca/IDE.png)
 ![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/bff3ba1ff18116a53f929888c0acd8fbaea7dacf/Matlab/robot_plot.png)
 ## **2. Features**  
 The functions are divided into the following:
 - Inverse Functions(Inv, LuDecomposition, LuInverse, pInv)
 - Linear Algebra ( Eye, isValueNegligible, MatMul, Mat_byScalar, norm, Trace )
 - Jacobian functions (AdjointTransform, angVelToSkewSymMatrix, BodyJacobian, expToRotAxisAndAngle, Exp_se3_fromTrans, Exp_so3_fromRot, fastInverseTransform, getFwdKinematics_Body, getInvKinematics_Body, RotSO3_fromExpso3, se3ToSpatialVel, so3ToAngularVelocity, spatialVelToSE3Matrix, TransSE3_fromExp_se3, TransSE3_ToRotAndPos)
+
+![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/b4520f9d2a56410a5587972f90c99d417a006dca/IDE.png)
 
 For the complete description and examples on how to use the functions, please check the [KinIn_documentation](https://yoyiberto.github.io/KinIn_documentation/).
 
