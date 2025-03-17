@@ -25,6 +25,7 @@ For MATLAB, the code requires the Robotics System Toolbox.
 ### CODESYS:
 - Install CODESYS V3.5 from the official website if not already installed
 - Install OSCAT BASIC 3.3.4.0 library (included as 'BASIC.library' in this repository or available on the CODESYS official website)
+- Open the 'KinIn.project' in CODESYS
 
 To install the library, click on the Tools tab in CODESYS IDE, then select Library Repository and Install. Alternatively, use CODESYS Installer.
 
