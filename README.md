@@ -1,4 +1,4 @@
-# KinIn: Inverse Kinematics Framework
+![image](https://github.com/user-attachments/assets/7dbe0904-a244-4eec-8d76-a8d8042b22c2)# KinIn: Inverse Kinematics Framework
 
 ## **1. Project Description**  
 KinIn is a framework for iterative kinematic analysis of mechanical systems. It evaluates the feasibility of robotic calculations for complex mechanisms, particularly those with more than five degrees of freedom in heavy machinery. The framework uses iterative computation methods rather than traditional analytical techniques to achieve results.
@@ -41,7 +41,7 @@ The framework is designed to integrate complex workflows. All files and function
 PLC_PRG uses the 'INV KIN' function to calculate the angles needed to reach an arbitrary position (defined by a 4x4 matrix T). The function returns the solution in 'thetalist'.
 
 ### MATLAB: 
-Run 'code.m' to visualize the results and verify that they match the CODESYS output, providing insight into how the mechanism will behave in real-world applications.
+Run 'plot_robot.m' to visualize the results and verify that they match the CODESYS output, providing insight into how the mechanism will behave in real-world applications.
 
 ### **6. Demonstration & Examples**  
 ### CODESYS:
