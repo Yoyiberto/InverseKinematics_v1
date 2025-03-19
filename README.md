@@ -5,7 +5,7 @@ KinIn is a framework for iterative kinematic analysis of mechanical systems. It 
 
 This repository contains the framework files in Structured Text. The MATLAB directory includes a complementary example for better visualization and exploration of the mechanism.
 
-![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/bff3ba1ff18116a53f929888c0acd8fbaea7dacf/Matlab/robot_plot.png)
+![image_alt](https://github.com/Yoyiberto/InverseKinematics_v1/blob/7eb6727532a3a3b13815fd998045cfedd0f3ad9d/Matlab/robot_plot.png)
 
 ## **2. Features**  
 The functions are categorized as follows:
