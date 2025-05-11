@@ -1,0 +1,17 @@
+FUNCTION_BLOCK norm
+VAR_IN_OUT
+	vector:ARRAY [*] OF REAL;//vector
+END_VAR
+VAR_OUTPUT
+	normValue:REAL;//
+END_VAR
+VAR
+	i:DINT;
+END_VAR
+
+//This get the norm of the vector
+normValue:=0;
+FOR i:=1 TO UPPER_BOUND(vector,1) DO
+	normValue:=normValue+vector[i]*vector[i];
+END_FOR
+normValue:=SQRT(normValue);

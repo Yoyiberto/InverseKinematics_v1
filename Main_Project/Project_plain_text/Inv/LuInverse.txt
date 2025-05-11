@@ -1,0 +1,51 @@
+FUNCTION_BLOCK LuInverse
+VAR_INPUT
+	nSize : DINT;
+	// Input matrices (fixed size internally)
+	L:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	u:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	eyeN:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+END_VAR
+VAR_OUTPUT
+	// Output matrices (fixed size internally)
+	a:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Inverse result
+	d:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Intermediate matrix
+END_VAR
+VAR
+	row:DINT;
+	col:DINT;
+	m:DINT;
+	sumTemp_2:REAL;
+	sumTemp_d:REAL;
+	
+END_VAR
+
+FOR col:=1 TO nSize DO
+    row:=1;
+    for row:=1 TO nSize DO
+        //forward substitution
+        m:=1;sumTemp_d:=0;
+        for m:=1 TO row-1 DO
+            sumTemp_d:=sumTemp_d+L[row,m]*d[m,col];
+        end_for    
+        d[row,col]:=eyeN[row,col]-sumTemp_d;
+    end_for
+
+    //backward substitution
+    row:=nSize;
+    FOR row:=nSize TO 1 BY -1 DO
+        m:=nSize;sumTemp_2:=0;
+        FOR m:=nSize TO row+1 BY -1 DO
+            sumTemp_2:=sumTemp_2+u[row,m]*a[m,col];
+        end_for    
+        
+		IF u[row,row]=0 AND (d[row,col]-sumTemp_2)=0 THEN
+			a[row,col]:=1;
+		ELSIF u[row,row]=0 THEN
+			a[row,col]:=3.402823E+10;
+		ELSE
+			a[row,col]:=(d[row,col]-sumTemp_2)/u[row,row];
+		END_IF
+		
+    end_for
+end_for

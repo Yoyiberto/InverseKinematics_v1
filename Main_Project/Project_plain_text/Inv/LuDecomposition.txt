@@ -1,0 +1,133 @@
+FUNCTION_BLOCK LuDecomposition
+VAR_INPUT
+	nSize : DINT;
+	// Input matrix (fixed size internally). **Not modified by this FB.**
+	A : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+END_VAR
+VAR_OUTPUT
+	// Output decomposition factors (fixed size internally)
+	L : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	U : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	// Pivot indices (permutation vector, 1-based)
+	P_indices : ARRAY [1..GVL.MAX_INV_SIZE] OF DINT;
+	// Flag indicating if the matrix was found to be singular
+	bSingular : BOOL := FALSE;
+END_VAR
+VAR
+	// Loop counters
+	i:DINT;
+	j:DINT;
+	k:DINT;
+	
+	// Working copy of the input matrix A
+	A_work : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	
+	// Pivoting variables
+	pivot_val : REAL;
+	max_row : DINT;
+	
+	// Temporary variables for sums and swaps
+	u_SumTemp : REAL;
+	l_SumTemp : REAL;
+	temp_real : REAL;
+	temp_int : DINT;
+	
+	// Small number tolerance for singularity check
+	tolerance : REAL := 1E-12; 
+END_VAR
+
+// ------------------- Initialization -------------------
+
+// Reset singularity flag
+bSingular := FALSE;
+
+// Initialize L, U, A_work, and P_indices
+FOR i := 1 TO nSize DO
+	P_indices[i] := i; // Initialize pivot indices to identity permutation
+	FOR j := 1 TO nSize DO
+		L[i, j] := 0.0;
+		U[i, j] := 0.0;
+		A_work[i, j] := A[i, j]; // Copy input A to working A
+	END_FOR
+END_FOR
+
+// Reset loop indices just in case
+i := 1; j := 1; k := 1;
+
+// ------------------- LU Decomposition with Pivoting -------------------
+
+FOR i := 1 TO nSize DO // Iterate through columns (for pivot element U[i,i])
+
+	// --- Pivoting Step ---
+	pivot_val := 0.0;
+	max_row := i;
+	// Find row with maximum pivot element in column i (from row i downwards)
+	FOR k := i TO nSize DO
+		IF ABS(A_work[k, i]) > pivot_val THEN
+			pivot_val := ABS(A_work[k, i]);
+			max_row := k;
+		END_IF
+	END_FOR
+
+	// Check for singularity
+	IF pivot_val < tolerance THEN
+		bSingular := TRUE;
+		RETURN; // Exit FB execution if singular
+	END_IF
+
+	// Swap rows if necessary
+	IF max_row <> i THEN
+		// Swap pivot indices
+		temp_int := P_indices[i];
+		P_indices[i] := P_indices[max_row];
+		P_indices[max_row] := temp_int;
+
+		// Swap rows in working matrix A_work
+		FOR j := 1 TO nSize DO 
+			temp_real := A_work[i, j];
+			A_work[i, j] := A_work[max_row, j];
+			A_work[max_row, j] := temp_real;
+		END_FOR
+
+		// Swap already computed part of L (columns 1 to i-1)
+		FOR k := 1 TO i - 1 DO
+			temp_real := L[i, k];
+			L[i, k] := L[max_row, k];
+			L[max_row, k] := temp_real;
+		END_FOR
+	END_IF
+
+	// --- Decomposition Step (Doolittle after pivoting) ---
+
+	// Set L diagonal element
+	L[i, i] := 1.0;
+
+	// Calculate U for row i (U[i,j] for j >= i)
+	FOR j := i TO nSize DO
+		u_SumTemp := 0.0;
+		FOR k := 1 TO i - 1 DO
+			u_SumTemp := u_SumTemp + L[i, k] * U[k, j];
+		END_FOR
+		U[i, j] := A_work[i, j] - u_SumTemp;
+	END_FOR
+
+	// *** NEW Singularity Check ***
+	// Check the computed diagonal element U[i, i] after it's calculated
+	IF ABS(U[i, i]) < tolerance THEN
+	    bSingular := TRUE;
+	    RETURN; // Exit FB execution if singular
+	END_IF
+
+	// Calculate L for column i (L[j,i] for j > i)
+	// Division is safe because U[i,i] was checked above
+	FOR j := i + 1 TO nSize DO
+		l_SumTemp := 0.0;
+		FOR k := 1 TO i - 1 DO
+			l_SumTemp := l_SumTemp + L[j, k] * U[k, i];
+		END_FOR
+		
+		L[j, i] := (A_work[j, i] - l_SumTemp) / U[i, i]; // U[i,i] is non-zero here
+
+	END_FOR
+
+END_FOR // End of main loop over i

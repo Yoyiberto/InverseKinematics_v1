@@ -1,0 +1,125 @@
+FUNCTION_BLOCK inv_fixed
+VAR_INPUT
+    n: DINT; // Size of the square matrix
+END_VAR
+VAR_IN_OUT
+	matSquare:ARRAY[*,*] OF REAL;
+	InverseMatrix:ARRAY[*,*] OF REAL;
+END_VAR
+VAR
+	// FB instances
+	LuDecomposition: LuDecomposition;
+	Eye_LA: Eye; 
+	LuInverse: LuInverse;
+
+	// Internal fixed-size arrays
+	L:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	U:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	P_mat:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	d:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; 
+	eyeN_internal:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+
+	tempA : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	tempInvPA : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; 
+	tempTrueInv : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+
+	// Local variables
+	i : DINT;
+	j : DINT;
+	k : DINT; 
+	bError : BOOL := FALSE; 
+	sEyeError : STRING; 
+	bEyeValid : BOOL;   
+END_VAR
+
+// 1. Validate input size 'n' and array capacities
+IF n <= 0 OR n > GVL.MAX_INV_SIZE THEN
+	bError := TRUE;
+	RETURN;
+END_IF;
+
+// Check if matSquare VAR_IN_OUT is large enough for specified 'n'
+IF UPPER_BOUND(matSquare, 1) < n OR UPPER_BOUND(matSquare, 2) < n THEN
+	bError := TRUE; // matSquare too small
+	RETURN;
+END_IF;
+
+// Check if InverseMatrix VAR_IN_OUT is large enough for specified 'n'
+IF UPPER_BOUND(InverseMatrix, 1) < n OR UPPER_BOUND(InverseMatrix, 2) < n THEN
+	bError := TRUE; // InverseMatrix too small
+	RETURN;
+END_IF;
+
+// 2. Copy Input Matrix (n x n part) to Internal Fixed-Size Array tempA
+FOR i := 1 TO n DO
+	FOR j := 1 TO n DO
+		tempA[i, j] := matSquare[i, j];
+	END_FOR;
+END_FOR;
+
+// 3. Call Sub-Function Blocks
+LuDecomposition(
+	nSize := n, // Use input 'n'
+	A:=tempA,
+	L=>L,
+	U=>U
+);
+
+FOR i := 1 TO n DO 
+	FOR j := 1 TO n DO
+		eyeN_internal[i, j] := 0.0;
+	END_FOR;
+END_FOR;
+
+Eye_LA(
+	eye := eyeN_internal, 
+	Error => sEyeError,
+	is_valid => bEyeValid
+);
+
+IF NOT bEyeValid THEN
+	bError := TRUE;
+	RETURN;
+END_IF;
+
+LuInverse(
+	nSize := n, // Use input 'n'
+	L:= L,
+	u:= U,
+	eyeN:= eyeN_internal, 
+	a=>tempInvPA, 
+	d=>d
+);
+
+// 4. Construct Permutation Matrix P (n x n part)
+FOR i := 1 TO n DO
+	FOR j := 1 TO n DO
+		P_mat[i, j] := 0.0;
+	END_FOR;
+END_FOR;
+
+FOR i := 1 TO n DO
+	IF LuDecomposition.P_indices[i] >= 1 AND LuDecomposition.P_indices[i] <= n THEN // Use 'n'
+		P_mat[i, LuDecomposition.P_indices[i]] := 1.0;
+	ELSE
+		bError := TRUE;
+		RETURN;
+	END_IF;
+END_FOR;
+
+// 5. Calculate True Inverse A^-1 = (PA)^-1 * P (n x n part)
+FOR i := 1 TO n DO
+	FOR j := 1 TO n DO
+		tempTrueInv[i, j] := 0.0; 
+		FOR k := 1 TO n DO
+			tempTrueInv[i, j] := tempTrueInv[i, j] + tempInvPA[i, k] * P_mat[k, j];
+		END_FOR;
+	END_FOR;
+END_FOR;
+
+// 6. Copy Result (n x n part) to Output IN_OUT Variable
+FOR i := 1 TO n DO
+	FOR j := 1 TO n DO
+		InverseMatrix[i, j] := tempTrueInv[i, j];
+	END_FOR;
+END_FOR;

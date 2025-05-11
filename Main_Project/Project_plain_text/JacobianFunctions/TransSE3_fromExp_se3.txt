@@ -1,0 +1,114 @@
+FUNCTION_BLOCK TransSE3_fromExp_se3
+VAR_INPUT
+	se3mat:ARRAY [1..4,1..4] OF REAL;//4x4
+	
+END_VAR
+VAR_OUTPUT
+	T:ARRAY [1..4,1..4] OF REAL;
+END_VAR
+VAR
+	expToRotAxisAndAngle:expToRotAxisAndAngle;
+	RotSO3_fromExpso3:RotSO3_fromExpso3;
+	MatMul:MatMul;
+	se3mat3x3:ARRAY [1..3,1..3] OF REAL;
+	Eye:Eye;
+	so3ToAngularVelocity:so3ToAngularVelocity;
+	isValueNegligible:isValueNegligible;
+	i:DINT;
+	j:DINT;
+	omgtheta:ARRAY [1..3] OF REAL;//SO3x3
+	eye3:ARRAY [1..3,1..3] OF REAL;
+	
+	omghat:ARRAY [1..3] OF REAL;;//scalar
+	theta:REAL;
+	omgmat:ARRAY [1..3,1..3] OF REAL;
+	
+	R_Matrix:ARRAY [1..3,1..3] OF REAL;
+	
+	//----------------final calculations------------------------
+	MatResult:ARRAY [1..3,1..3] OF REAL;
+	p1:ARRAY [1..3,1..3] OF REAL;
+	p2:ARRAY [1..3,1..3] OF REAL;
+	p3:ARRAY [1..3,1..3] OF REAL;
+	p_temp2:ARRAY [1..3,1..3] OF REAL;
+	p:ARRAY [1..3] OF REAL;
+	
+	temp_sum:REAL;
+END_VAR
+
+i:=1;j:=1;
+Eye(eye:= eye3);
+FOR i:=1 TO 3 DO
+	FOR j:=1 TO 3 DO
+		se3mat3x3[i,j]:=se3mat[i,j];
+	END_FOR
+END_FOR
+		
+so3ToAngularVelocity(so3mat:=se3mat3x3
+		 , omg=> omgtheta);
+(*isValueNegligible.isValueNegligible(nearArray:=omgtheta);
+
+IF isValueNegligible.isValueNegligible.judge=1 THEN*)
+isValueNegligible(nearArray:=omgtheta);
+IF isValueNegligible.judge=1 THEN
+	FOR i:=1 TO 3 DO
+		FOR j:=1 TO 3 DO
+			T[i,j]:=eye3[i,j];
+		END_FOR
+	END_FOR
+	T[1,4]:=se3mat[1,4];
+	T[2,4]:=se3mat[2,4];
+	T[3,4]:=se3mat[3,4];
+	
+	T[4,1]:=0;
+	T[4,2]:=0;
+	T[4,3]:=0;
+	T[4,4]:=1;
+
+ELSE
+	expToRotAxisAndAngle(expc3:= omgtheta,
+ 		omghat=>omghat , theta=>theta );
+	FOR i:=1 TO 3 DO
+		FOR j:=1 TO 3 DO
+			omgmat[i,j]:=se3mat3x3[i,j]/theta;
+		END_FOR
+	END_FOR	
+	RotSO3_fromExpso3(so3mat:= se3mat3x3,
+				R_Matrix=> R_Matrix);
+	i:=1;j:=1;			
+	FOR i:=1 TO 3 DO
+		FOR j:=1 TO 3 DO
+			T[i,j]:=R_Matrix[i,j];
+		END_FOR
+	END_FOR	
+	(*
+	(eye(3) * theta + (1 - COS(theta)) * omgmat ...
+          + (theta - SIN(theta)) * omgmat * omgmat)
+* se3mat(1: 3, 4) / theta;
+	*)
+	MatMul(mat1:=omgmat , mat2:=omgmat , 
+			MatResult:=MatResult );
+	i:=1;j:=1;		
+	FOR i:=1 TO 3 DO
+		FOR j:=1 TO 3 DO
+			p1[i,j]:=eye3[i,j] * theta;
+			p2[i,j]:=(1 - COS(theta)) * omgmat[i,j];
+			p3[i,j]:=(theta - SIN(theta))*MatResult[i,j];
+			p_temp2[i,j]:=p1[i,j]+p2[i,j]+p3[i,j];
+		END_FOR
+	END_FOR	
+		
+	
+	i:=1;j:=1;
+	FOR i:=1 TO 3 DO//carefull because from 3x3 *3x1 to 3x1 
+		T[i,4]:=0;
+		FOR j:=1 TO 3 DO
+			T[i,4]:=T[i,4]+p_temp2[i,j]*se3mat[j, 4]/theta;
+		END_FOR
+	END_FOR	
+	//adding to transform
+	T[4,1]:=0;
+	T[4,2]:=0;
+	T[4,3]:=0;
+	T[4,4]:=1;
+END_IF

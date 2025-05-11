@@ -1,0 +1,46 @@
+FUNCTION_BLOCK getFwdKinematics_Body
+VAR_INPUT
+	M:ARRAY [1..4,1..4] OF REAL;
+
+END_VAR
+VAR_IN_OUT
+	Blist:ARRAY [*,*] OF REAL;//6rows x njoints
+	thetalist:ARRAY [*] OF REAL;//number of joints
+END_VAR
+VAR_OUTPUT
+	T:ARRAY [1..4,1..4] OF REAL;
+	Error:WSTRING;
+END_VAR
+VAR
+	spatialVelToSE3Matrix:spatialVelToSE3Matrix;
+	TransSE3_fromExp_se3:TransSE3_fromExp_se3;
+	MatMul:MatMul;
+	Mat_byScalar:Mat_byScalar;
+	Vect_byScalar:Vect_byScalar;
+	i:DINT;
+	j:DINT;
+	Blist_vect:ARRAY [1..6] OF REAL;
+	intoVecTose3:ARRAY [1..6] OF REAL;
+	se3mat:ARRAY [1..4,1..4] OF REAL;
+	MatrixExp6_out:ARRAY [1..4,1..4] OF REAL;//4x4 TransformMatrix?
+	T_MatResult:ARRAY [1..4,1..4] OF REAL;
+END_VAR
+
+//assing T=M
+Mat_byScalar(scalar:=1 , Matrix:=M , 
+		MatrixByScalar:=T );
+
+i:=1;
+FOR i:=1 TO UPPER_BOUND(thetalist,1) DO
+	j:=1;	
+	FOR j:=1 TO UPPER_BOUND(Blist,1) DO //1 to 6
+		Blist_vect[j]:=Blist[j,i];
+	END_FOR	
+	Vect_byScalar(Vector:=Blist_vect , scalar:=thetalist[i] , 
+		VectorByScalar:= intoVecTose3);
+	spatialVelToSE3Matrix(V:= intoVecTose3, se3mat=> se3mat);	
+	TransSE3_fromExp_se3(se3mat:=se3mat , T=> MatrixExp6_out);
+	MatMul(mat1:= T, mat2:= MatrixExp6_out, MatResult:=T_MatResult );
+	Mat_byScalar(Matrix:=T_MatResult , scalar:= TO_REAL(1),
+	 MatrixByScalar:= T);//assing to the new T
+END_FOR

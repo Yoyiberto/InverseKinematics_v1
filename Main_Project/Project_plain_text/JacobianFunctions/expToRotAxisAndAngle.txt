@@ -1,0 +1,21 @@
+FUNCTION_BLOCK expToRotAxisAndAngle
+VAR
+	i:DINT;
+	norm:norm;
+	norm_expc3:REAL;
+END_VAR
+VAR_IN_OUT
+	expc3:ARRAY [*] OF REAL;//vector
+END_VAR
+VAR_OUTPUT
+	omghat:ARRAY [1..3] OF REAL;;//scalar
+	theta:REAL;
+END_VAR
+VAR
+END_VAR
+
+norm(vector:=expc3,
+		normValue=>theta);
+FOR i:= 1 TO UPPER_BOUND(expc3,1)DO
+	omghat[i] :=expc3[i]/theta;
+END_FOR

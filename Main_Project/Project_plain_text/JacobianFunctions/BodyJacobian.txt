@@ -1,0 +1,133 @@
+FUNCTION_BLOCK BodyJacobian
+VAR_IN_OUT
+	Blist:ARRAY [*,*] OF REAL;
+	thetalist:ARRAY [*] OF REAL;
+	Jb:ARRAY [*,*] OF REAL;;//6xnt nt: number of theta
+END_VAR
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	Error:WSTRING;
+END_VAR
+VAR
+	MatMul:MatMul;
+	Eye:Eye;
+	spatialVelToSE3Matrix:spatialVelToSE3Matrix;
+	TransSE3_fromExp_se3:TransSE3_fromExp_se3;
+	AdjointTransform:AdjointTransform;
+	i:DINT;
+	j:DINT;
+    num_joints : DINT; // Added for clarity and consistent use
+	T:ARRAY [1..4,1..4] OF REAL;
+	//temporal variables
+	T_inside:ARRAY [1..6] OF REAL;
+	se3mat:ARRAY [1..4,1..4] OF REAL;
+	T_exp6:ARRAY [1..4,1..4] OF REAL;
+	T_product:ARRAY [1..4,1..4] OF REAL;
+	AdT:ARRAY [1..6,1..6] OF REAL;
+	
+	i1:DINT;
+	j1:DINT;
+	(* Jb_temp:ARRAY [1..6,1..6] OF REAL; *) (* Removed Jb_temp as it was unused *)
+	
+END_VAR
+
+Error := ""; // Initialize error string
+
+// --- Input Validation ---
+IF UPPER_BOUND(Blist, 1) <> 6 THEN
+    Error := "BodyJacobian: Blist must have 6 rows.";
+    RETURN;
+END_IF
+
+num_joints := UPPER_BOUND(Blist, 2); // Number of joints
+
+IF UPPER_BOUND(thetalist, 1) <> num_joints THEN
+    Error := "BodyJacobian: Dimension mismatch: thetalist length must equal the number of columns in Blist.";
+    RETURN;
+END_IF
+
+IF UPPER_BOUND(Jb, 1) <> 6 OR UPPER_BOUND(Jb, 2) <> num_joints THEN
+    Error := "BodyJacobian: Jb dimensions incorrect. Must be 6xN, where N is the number of joints.";
+    RETURN;
+END_IF
+
+// Handle case with no joints
+IF num_joints = 0 THEN
+    // Jb is already sized (e.g., 6x0), no calculations needed.
+    // Error can remain empty, or set a specific info message if preferred.
+    RETURN;
+END_IF
+
+// --- Algorithm Start ---
+
+// Initialize Jb with Blist. This is the first step.
+// Jb_i = B_i for all i initially. The loop below updates Jb_i for i = n-1 down to 1.
+FOR i := 1 TO 6 DO                 // Iterate rows
+    FOR j := 1 TO num_joints DO    // Iterate columns
+        Jb[i, j] := Blist[i, j];
+    END_FOR
+END_FOR
+
+Eye(eye:= T);
+(* IF LEN(Eye.Error) > 0 THEN // Assuming Eye FB has an Error:WSTRING output - Removed as per compiler errors
+    Error := CONCAT("BodyJacobian: Error from Eye FB: ", Eye.Error);
+    RETURN;
+END_IF *)
+
+// Loop from the second to last joint (num_joints - 1) down to the first joint (1)
+// The loop variable 'i' here refers to the column of Jb being computed (Jb_i).
+FOR i := num_joints - 1 TO 1 BY -1 DO
+    // Calculate T_inside = -S_{i+1} * theta_{i+1}
+    // This is a 6x1 vector for the se(3) representation.
+    // Blist[*, i + 1] is the screw axis S_{i+1} for the (i+1)-th joint.
+    // thetalist[i + 1] is the angle theta_{i+1} for the (i+1)-th joint.
+    FOR j := 1 TO 6 DO // Iterate rows for the vector T_inside
+        T_inside[j] := -1.0 * Blist[j, i + 1] * thetalist[i + 1];
+    END_FOR
+    
+    spatialVelToSE3Matrix(V:=T_inside , se3mat=> se3mat);
+    (* IF LEN(spatialVelToSE3Matrix.Error) > 0 THEN // Removed as per compiler errors
+        Error := CONCAT("BodyJacobian: Error from spatialVelToSE3Matrix: ", spatialVelToSE3Matrix.Error);
+        RETURN;
+    END_IF *)
+
+    TransSE3_fromExp_se3(se3mat:=se3mat , T=> T_exp6);
+    (* IF LEN(TransSE3_fromExp_se3.Error) > 0 THEN // Removed as per compiler errors
+        Error := CONCAT("BodyJacobian: Error from TransSE3_fromExp_se3: ", TransSE3_fromExp_se3.Error);
+        RETURN;
+    END_IF *)
+    
+    // T_product = T * T_exp6
+    // T accumulates the product of exponentials: T_new = T_old * exp(-S_{i+1}*theta_{i+1})
+    MatMul(mat1:=T , mat2:=T_exp6 , MatResult:= T_product);
+    (* IF LEN(MatMul.Error) > 0 THEN // Removed as per compiler errors
+        Error := CONCAT("BodyJacobian: Error from MatMul (T*T_exp6): ", MatMul.Error);
+        RETURN;
+    END_IF *)
+    
+    // Update T for the next iteration: T = T_product
+    FOR i1:=1 TO 4 DO
+        FOR j1:=1 TO 4 DO
+            T[i1,j1]:=T_product[i1,j1];
+        END_FOR
+    END_FOR
+    
+    // Calculate Adjoint(T_product), where T_product is the current accumulated transformation
+    AdjointTransform(Transform4x4:= T_product, AdT=>AdT );
+    (* IF LEN(AdjointTransform.Error) > 0 THEN // Removed as per compiler errors
+        Error := CONCAT("BodyJacobian: Error from AdjointTransform: ", AdjointTransform.Error);
+        RETURN;
+    END_IF *)
+    
+    // Update Jb[:, i] = Adjoint(T) * Blist[:, i]
+    // Blist[:, i] is the i-th screw axis (S_i) (a 6x1 vector)
+    // AdT is 6x6
+    FOR i1 := 1 TO 6 DO         // Iterate rows of Jb column 'i' (and rows of AdT)
+        Jb[i1, i] := 0.0;       // Initialize element for summation
+        FOR j1 := 1 TO 6 DO     // Iterate columns of AdT (and rows of Blist[:, i])
+            Jb[i1, i] := Jb[i1, i] + AdT[i1, j1] * Blist[j1, i];
+        END_FOR
+    END_FOR
+END_FOR
+// End of Jacobian calculation loop

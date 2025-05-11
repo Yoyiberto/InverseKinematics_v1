@@ -1,0 +1,21 @@
+FUNCTION_BLOCK Mat_byScalar
+VAR_INPUT
+	scalar:REAL;
+END_VAR
+VAR_IN_OUT
+	Matrix:ARRAY[*,*] OF REAL;
+	
+	MatrixByScalar:ARRAY[*,*] OF REAL;
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	i:DINT;
+	j:DINT;
+END_VAR
+
+FOR i:=1 TO UPPER_BOUND(Matrix,1) DO
+	FOR j:=1 TO UPPER_BOUND(Matrix,2) DO
+		MatrixByScalar[i,j]:=Matrix[i,j]*scalar;
+	END_FOR
+END_FOR

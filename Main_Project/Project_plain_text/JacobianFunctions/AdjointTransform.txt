@@ -1,0 +1,47 @@
+FUNCTION_BLOCK AdjointTransform
+VAR_INPUT
+	Transform4x4:ARRAY [1..4,1..4] OF REAL;//trasnform 4x4
+END_VAR
+VAR_OUTPUT
+	AdT:ARRAY [1..6,1..6] OF REAL;//6x6 matrix
+END_VAR
+VAR
+	angVelToSkewSymMatrix:angVelToSkewSymMatrix;
+	MatMul:MatMul;
+	TransSE3_ToRotAndPos:TransSE3_ToRotAndPos;//function
+	RotMat:ARRAY[1..3,1..3] OF REAL;//rotation matrix
+	p:ARRAY[1..3] OF REAL;//position array
+	
+	i:DINT;
+	j:DINT;
+	so3mat:ARRAY[1..3,1..3] OF REAL;
+	MatResult:ARRAY[1..3,1..3] OF REAL;
+END_VAR
+
+TransSE3_ToRotAndPos(T:=Transform4x4 ,
+		 RotMat=> RotMat, p=>p );
+
+i:=1;j:=1;
+FOR i:=1 TO 3 DO
+	FOR j:=1 TO 3 DO
+		AdT[i,j]:=Transform4x4[i,j];//equals to RotMatrix
+		AdT[i+3,j+3]:=Transform4x4[i,j];//equals to RotMatrix
+		AdT[i,j+3]:=0;//assigning that part to zeros
+	END_FOR
+END_FOR
+
+angVelToSkewSymMatrix(omg:= p, so3mat=> so3mat);
+
+MatMul(mat1:=so3mat , mat2:=RotMat , 
+		MatResult:=MatResult );
+i:=1;j:=1;
+FOR i:=1 TO 3 DO
+	FOR j:=1 TO 3 DO
+		AdT[i+3,j]:=MatResult[i,j];//equals to RotMatrix
+	END_FOR
+END_FOR
+
+
+
+
+
