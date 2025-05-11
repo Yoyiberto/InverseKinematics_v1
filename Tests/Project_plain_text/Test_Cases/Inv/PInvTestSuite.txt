@@ -1,0 +1,256 @@
+FUNCTION_BLOCK PInvTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    pInv_FB : pInv; // Instance of the pInv function block
+    
+    // Test matrices
+    matrix_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    pInv_matrix_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    expected_pInv_2x2 : ARRAY[1..2, 1..2] OF REAL;
+
+    matrix_2x3 : ARRAY[1..2, 1..3] OF REAL;
+    pInv_matrix_3x2 : ARRAY[1..3, 1..2] OF REAL; // pInv of 2x3 is 3x2
+    expected_pInv_3x2 : ARRAY[1..3, 1..2] OF REAL;
+
+    matrix_3x2 : ARRAY[1..3, 1..2] OF REAL;
+    pInv_matrix_2x3 : ARRAY[1..2, 1..3] OF REAL; // pInv of 3x2 is 2x3
+    expected_pInv_2x3 : ARRAY[1..2, 1..3] OF REAL;
+    
+    // Error case: Singular matrix for inversion if pInv doesn't handle it gracefully
+    // For pInv, even a zero matrix has a pseudo-inverse (which is a zero matrix of transposed dimensions)
+    matrix_zero_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    pInv_zero_2x2   : ARRAY[1..2, 1..2] OF REAL;
+    expected_pInv_zero_2x2 : ARRAY[1..2, 1..2] OF REAL;
+
+    // Dimension error tests
+    matrix_too_large : ARRAY[1..GVL.MAX_INV_SIZE + 1, 1..2] OF REAL; // Exceeds max rows
+    pInv_matrix_dim_error_out : ARRAY[1..2, 1..GVL.MAX_INV_SIZE + 1] OF REAL;
+    
+    matrix_valid_for_dim_test : ARRAY[1..2, 1..2] OF REAL;
+    pInv_matrix_output_mismatch : ARRAY[1..3, 1..3] OF REAL; // Wrong output dimensions
+
+    i, j : DINT;
+    k : DINT; // For iteration in result checking
+    bTestPass : BOOL;
+    fTolerance : REAL := 0.0001; // Tolerance for comparing REAL numbers
+
+    // Helper for checking results
+    FUNCTION AreMatricesClose : BOOL
+    VAR_INPUT
+        matA : POINTER TO REAL;
+        matB : POINTER TO REAL;
+        rows : DINT;
+        cols : DINT;
+        tolerance : REAL;
+    END_VAR
+    VAR
+        row, col : DINT;
+        valA, valB : REAL;
+        idx : DINT;
+    END_VAR
+        FOR row := 0 TO rows - 1 DO
+            FOR col := 0 TO cols - 1 DO
+                idx := row * cols + col;
+                valA := matA[idx];
+                valB := matB[idx];
+                IF ABS(valA - valB) > tolerance THEN
+                    AreMatricesClose := FALSE;
+                    RETURN;
+                END_IF;
+            END_FOR;
+        END_FOR;
+        AreMatricesClose := TRUE;
+    END_FUNCTION
+
+END_VAR
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup matrices for later tests
+            // Test 1: 2x2 matrix
+            // A = [[4, 0], [3, -5]]
+            // A_inv = [[1/4, 0], [3/20, -1/5]] = [[0.25, 0], [0.15, -0.2]]
+            matrix_2x2[1,1] := 4; matrix_2x2[1,2] := 0;
+            matrix_2x2[2,1] := 3; matrix_2x2[2,2] := -5;
+            
+            expected_pInv_2x2[1,1] := 0.25; expected_pInv_2x2[1,2] := 0;
+            expected_pInv_2x2[2,1] := 0.15; expected_pInv_2x2[2,2] := -0.2;
+
+            // Test 2: 2x3 matrix (Tall if thinking A', but it's wide)
+            // A = [[1, 2, 3], [4, 5, 6]]
+            // A_plus = A' * (A * A')^-1
+            // A*A' = [[14, 32], [32, 77]]
+            // (A*A')^-1 = (1/(14*77 - 32*32)) * [[77, -32], [-32, 14]]
+            //           = (1/(1078 - 1024)) * [[77, -32], [-32, 14]]
+            //           = (1/54) * [[77, -32], [-32, 14]]
+            //           = [[77/54, -32/54], [-32/54, 14/54]]
+            //           = [[1.4259, -0.5926], [-0.5926, 0.2593]] (approx)
+            // A_plus = [[1, 4], [2, 5], [3, 6]] * [[1.4259, -0.5926], [-0.5926, 0.2593]]
+            // A_plus[1,1] = 1*1.4259 + 4*-0.5926 = 1.4259 - 2.3704 = -0.9445
+            // A_plus[1,2] = 1*-0.5926 + 4*0.2593 = -0.5926 + 1.0372 = 0.4446
+            // A_plus[2,1] = 2*1.4259 + 5*-0.5926 = 2.8518 - 2.963  = -0.1112
+            // A_plus[2,2] = 2*-0.5926 + 5*0.2593 = -1.1852 + 1.2965 = 0.1113
+            // A_plus[3,1] = 3*1.4259 + 6*-0.5926 = 4.2777 - 3.5556 = 0.7221
+            // A_plus[3,2] = 3*-0.5926 + 6*0.2593 = -1.7778 + 1.5558 = -0.222
+            // Results from Python: numpy.linalg.pinv([[1,2,3],[4,5,6]])
+            // [[-0.94444444,  0.44444444],
+            //  [-0.11111111,  0.11111111],
+            //  [ 0.72222222, -0.22222222]]
+            matrix_2x3[1,1] := 1; matrix_2x3[1,2] := 2; matrix_2x3[1,3] := 3;
+            matrix_2x3[2,1] := 4; matrix_2x3[2,2] := 5; matrix_2x3[2,3] := 6;
+
+            expected_pInv_3x2[1,1] := -0.94444444; expected_pInv_3x2[1,2] := 0.44444444;
+            expected_pInv_3x2[2,1] := -0.11111111; expected_pInv_3x2[2,2] := 0.11111111;
+            expected_pInv_3x2[3,1] := 0.72222222;  expected_pInv_3x2[3,2] := -0.22222222;
+            
+            // Test 3: 3x2 matrix (Tall)
+            // A = [[1, 2], [3, 4], [5, 6]]
+            // A_plus = (A'A)^-1 * A'
+            // A'A = [[1,3,5],[2,4,6]] * [[1,2],[3,4],[5,6]] = [[1+9+25, 2+12+30],[2+12+30, 4+16+36]]
+            //     = [[35, 44], [44, 56]]
+            // (A'A)^-1 = (1/(35*56 - 44*44)) * [[56, -44],[-44, 35]]
+            //          = (1/(1960 - 1936)) * [[56, -44],[-44, 35]]
+            //          = (1/24) * [[56, -44],[-44, 35]]
+            //          = [[56/24, -44/24],[-44/24, 35/24]]
+            //          = [[2.3333, -1.8333],[-1.8333, 1.4583]] (approx)
+            // A_plus = [[2.3333, -1.8333],[-1.8333, 1.4583]] * [[1,3,5],[2,4,6]]
+            // A_plus[1,1] = 2.3333*1 - 1.8333*2 = 2.3333 - 3.6666 = -1.3333
+            // A_plus[1,2] = 2.3333*3 - 1.8333*4 = 6.9999 - 7.3332 = -0.3333
+            // A_plus[1,3] = 2.3333*5 - 1.8333*6 = 11.6665 - 10.9998 = 0.6667
+            // A_plus[2,1] = -1.8333*1 + 1.4583*2 = -1.8333 + 2.9166 = 1.0833
+            // A_plus[2,2] = -1.8333*3 + 1.4583*4 = -5.4999 + 5.8332 = 0.3333
+            // A_plus[2,3] = -1.8333*5 + 1.4583*6 = -9.1665 + 8.7498 = -0.4167
+            // Results from Python: numpy.linalg.pinv([[1,2],[3,4],[5,6]])
+            // [[-1.33333333, -0.33333333,  0.66666667],
+            //  [ 1.08333333,  0.33333333, -0.41666667]]
+            matrix_3x2[1,1] := 1; matrix_3x2[1,2] := 2;
+            matrix_3x2[2,1] := 3; matrix_3x2[2,2] := 4;
+            matrix_3x2[3,1] := 5; matrix_3x2[3,2] := 6;
+
+            expected_pInv_2x3[1,1] := -1.33333333; expected_pInv_2x3[1,2] := -0.33333333; expected_pInv_2x3[1,3] := 0.66666667;
+            expected_pInv_2x3[2,1] := 1.08333333;  expected_pInv_2x3[2,2] := 0.33333333;  expected_pInv_2x3[2,3] := -0.41666667;
+
+            // Test 4: Zero matrix
+            matrix_zero_2x2[1,1] := 0; matrix_zero_2x2[1,2] := 0;
+            matrix_zero_2x2[2,1] := 0; matrix_zero_2x2[2,2] := 0;
+            expected_pInv_zero_2x2[1,1] := 0; expected_pInv_zero_2x2[1,2] := 0;
+            expected_pInv_zero_2x2[2,1] := 0; expected_pInv_zero_2x2[2,2] := 0;
+            
+            // Test 5: Valid matrix for dimension error test (output mismatch)
+            matrix_valid_for_dim_test[1,1] := 1; matrix_valid_for_dim_test[1,2] := 2;
+            matrix_valid_for_dim_test[2,1] := 3; matrix_valid_for_dim_test[2,2] := 4;
+
+            nCurrentTest := nCurrentTest + 1;
+            
+        1: // Test Case 1: Simple 2x2 Invertible Matrix
+            pInv_FB(matrix := matrix_2x2, pInvMatrix := pInv_matrix_2x2);
+            
+            bTestPass := AreMatricesClose(matA := ADR(pInv_matrix_2x2), matB := ADR(expected_pInv_2x2), rows := 2, cols := 2, tolerance := fTolerance) AND NOT pInv_FB.bError;
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'PInv failed for 2x2 matrix or error flag set';
+                IF pInv_FB.bError THEN
+                    sLastError := 'PInv failed for 2x2 matrix with bError TRUE';
+                END_IF;
+            END_IF;
+            nCurrentTest := nCurrentTest + 1;
+            
+        2: // Test Case 2: 2x3 Matrix (Wide)
+            pInv_FB(matrix := matrix_2x3, pInvMatrix := pInv_matrix_3x2);
+            
+            bTestPass := AreMatricesClose(matA := ADR(pInv_matrix_3x2), matB := ADR(expected_pInv_3x2), rows := 3, cols := 2, tolerance := fTolerance) AND NOT pInv_FB.bError;
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'PInv failed for 2x3 matrix';
+                IF pInv_FB.bError THEN
+                    sLastError := 'PInv failed for 2x3 matrix with bError TRUE';
+                END_IF;
+            END_IF;
+            nCurrentTest := nCurrentTest + 1;
+
+        3: // Test Case 3: 3x2 Matrix (Tall)
+            pInv_FB(matrix := matrix_3x2, pInvMatrix := pInv_matrix_2x3);
+            
+            bTestPass := AreMatricesClose(matA := ADR(pInv_matrix_2x3), matB := ADR(expected_pInv_2x3), rows := 2, cols := 3, tolerance := fTolerance) AND NOT pInv_FB.bError;
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'PInv failed for 3x2 matrix';
+                IF pInv_FB.bError THEN
+                    sLastError := 'PInv failed for 3x2 matrix with bError TRUE';
+                END_IF;
+            END_IF;
+            nCurrentTest := nCurrentTest + 1;
+
+        4: // Test Case 4: 2x2 Zero Matrix
+            pInv_FB(matrix := matrix_zero_2x2, pInvMatrix := pInv_zero_2x2);
+            
+            bTestPass := AreMatricesClose(matA := ADR(pInv_zero_2x2), matB := ADR(expected_pInv_zero_2x2), rows := 2, cols := 2, tolerance := fTolerance) AND NOT pInv_FB.bError;
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'PInv failed for 2x2 zero matrix';
+                IF pInv_FB.bError THEN
+                    sLastError := 'PInv failed for 2x2 zero matrix with bError TRUE';
+                END_IF;
+            END_IF;
+            nCurrentTest := nCurrentTest + 1;
+            
+        5: // Test Case 5: Input Dimension Error (Too Large)
+            // matrix_too_large is defined as ARRAY[1..GVL.MAX_INV_SIZE + 1, 1..2]
+            // pInv_matrix_dim_error_out is ARRAY[1..2, 1..GVL.MAX_INV_SIZE + 1]
+            // The output dimensions for this specific input should be [2, GVL.MAX_INV_SIZE+1]
+            pInv_FB(matrix := matrix_too_large, pInvMatrix := pInv_matrix_dim_error_out);
+            
+            IF pInv_FB.bError THEN // Expecting an error
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'PInv did not report error for too-large input matrix';
+            END_IF;
+            nCurrentTest := nCurrentTest + 1;
+
+        6: // Test Case 6: Output Dimension Mismatch Error
+            // matrix_valid_for_dim_test is 2x2
+            // pInv_matrix_output_mismatch is 3x3, but pInv of 2x2 is 2x2
+            pInv_FB(matrix := matrix_valid_for_dim_test, pInvMatrix := pInv_matrix_output_mismatch);
+            
+            IF pInv_FB.bError THEN // Expecting an error
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'PInv did not report error for output dimension mismatch';
+            END_IF;
+            nCurrentTest := nCurrentTest + 1;
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN // Reset logic
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF 

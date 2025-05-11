@@ -1,0 +1,267 @@
+FUNCTION_BLOCK LuInverseTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING(255); // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    LU_Inv_FB : LuInverse;
+    LU_Decomp_FB : LuDecomposition; // To get L, U, P for some tests
+
+    // Test matrices and expected results
+    A_original : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    L_input    : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    U_input    : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    P_indices  : ARRAY[1..GVL.MAX_INV_SIZE] OF DINT;       // Pivot indices from LuDecomposition
+    eye_N_permuted : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Permutation matrix P as input to LuInverse
+    
+    A_inverse_expected : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    A_inverse_actual   : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Copy of LuInverse.a output
+
+    n_test_size : DINT; // Current size of the matrix for the test
+    fTolerance : REAL := 1E-5; // Tolerance for REAL comparisons
+    fLargeNumExpected : REAL := 3.402823E+10;
+
+    // Internal test state variables
+    bTestPass       : BOOL;
+    bMatrix_Pass    : BOOL;
+    k_loop, l_loop, m_loop : DINT; // Loop counters (m_loop can be used for inner loops if needed)
+    bDecompSingular : BOOL;
+END_VAR
+
+// Main execution logic
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Initial setup
+            sLastError := '';
+            // Inlined ClearMatrices logic
+            FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO
+                P_indices[k_loop] := 0;
+                FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO
+                    A_original[k_loop, l_loop] := 0.0;
+                    L_input[k_loop, l_loop] := 0.0;
+                    U_input[k_loop, l_loop] := 0.0;
+                    eye_N_permuted[k_loop, l_loop] := 0.0;
+                    A_inverse_expected[k_loop, l_loop] := 0.0;
+                    A_inverse_actual[k_loop, l_loop] := 0.0;
+                END_FOR
+            END_FOR
+            nCurrentTest := 1;
+
+        1: // Test Case 1: 2x2 Non-Singular Matrix A = [[4,2],[3,5]]
+            n_test_size := 2;
+            A_original[1,1] := 4.0; A_original[1,2] := 2.0;
+            A_original[2,1] := 3.0; A_original[2,2] := 5.0;
+            A_inverse_expected[1,1] := 5.0/14.0; A_inverse_expected[1,2] := -2.0/14.0;
+            A_inverse_expected[2,1] := -3.0/14.0; A_inverse_expected[2,2] := 4.0/14.0;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_original);
+            bDecompSingular := LU_Decomp_FB.bSingular;
+            IF bDecompSingular THEN
+                bTestPass := FALSE;
+                sLastError := 'Test 1: LuDecomposition reported singular for non-singular A.';
+            ELSE
+                L_input := LU_Decomp_FB.L;
+                U_input := LU_Decomp_FB.U;
+                P_indices := LU_Decomp_FB.P_indices;
+                
+                // Inlined CreatePermutationMatrix logic
+                FOR k_loop := 1 TO n_test_size DO // Use k_loop for r_idx
+                    FOR l_loop := 1 TO n_test_size DO // Use l_loop for c_idx
+                        eye_N_permuted[k_loop, l_loop] := 0.0;
+                    END_FOR
+                END_FOR
+                FOR k_loop := 1 TO n_test_size DO // Use k_loop for r_idx
+                    IF P_indices[k_loop] >= 1 AND P_indices[k_loop] <= n_test_size THEN
+                        eye_N_permuted[k_loop, P_indices[k_loop]] := 1.0;
+                    END_IF
+                END_FOR
+
+                LU_Inv_FB(nSize := n_test_size, L := L_input, u := U_input, eyeN := eye_N_permuted);
+                A_inverse_actual := LU_Inv_FB.a;
+
+                bMatrix_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(A_inverse_actual[k_loop, l_loop] - A_inverse_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrix_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrix_Pass THEN EXIT; END_IF
+                END_FOR
+                bTestPass := bMatrix_Pass;
+                IF NOT bTestPass THEN sLastError := 'Test 1 (2x2 Non-Singular) Failed matrix comparison.'; END_IF
+            END_IF
+
+            IF bTestPass THEN nPassCount := nPassCount + 1; ELSE nFailCount := nFailCount + 1; END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        2: // Test Case 2: 1x1 Matrix A = [[5]]
+            // Inlined ClearMatrices logic for this specific test (already partially done by case 0, but good for isolation)
+            FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO
+                P_indices[k_loop] := 0;
+                FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO
+                    A_original[k_loop, l_loop] := 0.0; L_input[k_loop, l_loop] := 0.0; U_input[k_loop, l_loop] := 0.0;
+                    eye_N_permuted[k_loop, l_loop] := 0.0; A_inverse_expected[k_loop, l_loop] := 0.0; A_inverse_actual[k_loop, l_loop] := 0.0;
+                END_FOR
+            END_FOR
+            n_test_size := 1;
+            A_original[1,1] := 5.0;
+            A_inverse_expected[1,1] := 0.2;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_original);
+            bDecompSingular := LU_Decomp_FB.bSingular;
+            IF bDecompSingular THEN
+                bTestPass := FALSE;
+                sLastError := 'Test 2: LuDecomposition reported singular for 1x1 A.';
+            ELSE
+                L_input := LU_Decomp_FB.L;
+                U_input := LU_Decomp_FB.U;
+                P_indices := LU_Decomp_FB.P_indices;
+
+                // Inlined CreatePermutationMatrix logic
+                FOR k_loop := 1 TO n_test_size DO FOR l_loop := 1 TO n_test_size DO eye_N_permuted[k_loop, l_loop] := 0.0; END_FOR END_FOR
+                FOR k_loop := 1 TO n_test_size DO IF P_indices[k_loop] >= 1 AND P_indices[k_loop] <= n_test_size THEN eye_N_permuted[k_loop, P_indices[k_loop]] := 1.0; END_IF END_FOR
+
+                LU_Inv_FB(nSize := n_test_size, L := L_input, u := U_input, eyeN := eye_N_permuted);
+                A_inverse_actual := LU_Inv_FB.a;
+                bTestPass := ABS(A_inverse_actual[1,1] - A_inverse_expected[1,1]) <= fTolerance;
+                IF NOT bTestPass THEN sLastError := 'Test 2 (1x1 Matrix) Failed.'; END_IF
+            END_IF
+
+            IF bTestPass THEN nPassCount := nPassCount + 1; ELSE nFailCount := nFailCount + 1; END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        3: // Test Case 3: 3x3 Non-Singular Matrix
+            FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO P_indices[k_loop] := 0; FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO A_original[k_loop, l_loop] := 0.0; L_input[k_loop, l_loop] := 0.0; U_input[k_loop, l_loop] := 0.0; eye_N_permuted[k_loop, l_loop] := 0.0; A_inverse_expected[k_loop, l_loop] := 0.0; A_inverse_actual[k_loop, l_loop] := 0.0; END_FOR END_FOR
+            n_test_size := 3;
+            A_original[1,1] := 1.0; A_original[1,2] := 1.0; A_original[1,3] := -1.0;
+            A_original[2,1] := 1.0; A_original[2,2] := 2.0; A_original[2,3] := -2.0;
+            A_original[3,1] := -2.0; A_original[3,2] := 1.0; A_original[3,3] := 1.0;
+            // Corrected A_inv_expected based on Det(A) = 2
+            // Adj(A) = C^T = [[4,-2,0],[3,-1,1],[5,-3,1]]
+            // A_inv = (1/2) * Adj(A)
+            A_inverse_expected[1,1] :=  2.0;    // 4.0/2.0
+            A_inverse_expected[1,2] := -1.0;    // -2.0/2.0
+            A_inverse_expected[1,3] :=  0.0;    // 0.0/2.0
+            A_inverse_expected[2,1] :=  1.5;    // 3.0/2.0
+            A_inverse_expected[2,2] := -0.5;    // -1.0/2.0
+            A_inverse_expected[2,3] :=  0.5;    // 1.0/2.0
+            A_inverse_expected[3,1] :=  2.5;    // 5.0/2.0
+            A_inverse_expected[3,2] := -1.5;    // -3.0/2.0
+            A_inverse_expected[3,3] :=  0.5;    // 1.0/2.0
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_original);
+            bDecompSingular := LU_Decomp_FB.bSingular;
+            IF bDecompSingular THEN
+                bTestPass := FALSE;
+                sLastError := 'Test 3: LuDecomposition reported singular.';
+            ELSE
+                L_input := LU_Decomp_FB.L;
+                U_input := LU_Decomp_FB.U;
+                P_indices := LU_Decomp_FB.P_indices;
+                
+                // Inlined CreatePermutationMatrix logic
+                FOR k_loop := 1 TO n_test_size DO FOR l_loop := 1 TO n_test_size DO eye_N_permuted[k_loop, l_loop] := 0.0; END_FOR END_FOR
+                FOR k_loop := 1 TO n_test_size DO IF P_indices[k_loop] >= 1 AND P_indices[k_loop] <= n_test_size THEN eye_N_permuted[k_loop, P_indices[k_loop]] := 1.0; END_IF END_FOR
+
+                LU_Inv_FB(nSize := n_test_size, L := L_input, u := U_input, eyeN := eye_N_permuted);
+                A_inverse_actual := LU_Inv_FB.a;
+
+                bMatrix_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(A_inverse_actual[k_loop, l_loop] - A_inverse_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrix_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrix_Pass THEN EXIT; END_IF
+                END_FOR
+                bTestPass := bMatrix_Pass;
+                IF NOT bTestPass THEN sLastError := 'Test 3 (3x3 Non-Singular) Failed matrix comp.'; END_IF
+            END_IF
+            IF bTestPass THEN nPassCount := nPassCount + 1; ELSE nFailCount := nFailCount + 1; END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        4: // Test Case 4: 2x2 Singular Matrix A = [[1,1],[1,1]] -> Expect large numbers
+            FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO P_indices[k_loop] := 0; FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO A_original[k_loop, l_loop] := 0.0; L_input[k_loop, l_loop] := 0.0; U_input[k_loop, l_loop] := 0.0; eye_N_permuted[k_loop, l_loop] := 0.0; A_inverse_expected[k_loop, l_loop] := 0.0; A_inverse_actual[k_loop, l_loop] := 0.0; END_FOR END_FOR
+            n_test_size := 2;
+            A_original[1,1] := 1.0; A_original[1,2] := 1.0;
+            A_original[2,1] := 1.0; A_original[2,2] := 1.0;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_original);
+            bDecompSingular := LU_Decomp_FB.bSingular;
+            IF NOT bDecompSingular THEN
+                bTestPass := FALSE;
+                sLastError := 'Test 4: LuDecomposition failed to report singular.';
+            ELSE
+                L_input := LU_Decomp_FB.L;
+                U_input := LU_Decomp_FB.U;
+                P_indices := LU_Decomp_FB.P_indices;
+
+                // Inlined CreatePermutationMatrix logic
+                FOR k_loop := 1 TO n_test_size DO FOR l_loop := 1 TO n_test_size DO eye_N_permuted[k_loop, l_loop] := 0.0; END_FOR END_FOR
+                FOR k_loop := 1 TO n_test_size DO IF P_indices[k_loop] >= 1 AND P_indices[k_loop] <= n_test_size THEN eye_N_permuted[k_loop, P_indices[k_loop]] := 1.0; END_IF END_FOR
+                
+                LU_Inv_FB(nSize := n_test_size, L := L_input, u := U_input, eyeN := eye_N_permuted);
+                A_inverse_actual := LU_Inv_FB.a;
+                bTestPass := (ABS(A_inverse_actual[2,1] - fLargeNumExpected) < fTolerance OR ABS(A_inverse_actual[2,2] - fLargeNumExpected) < fTolerance);
+                IF NOT bTestPass THEN sLastError := 'Test 4 (Singular 2x2) Failed, no large number.'; END_IF
+            END_IF
+
+            IF bTestPass THEN nPassCount := nPassCount + 1; ELSE nFailCount := nFailCount + 1; END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        5: // Test Case 5: Special Singular L=I, P=I, U=[[1,1],[0,0]]. Expect a[2,1]=1.
+            FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO P_indices[k_loop] := 0; FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO A_original[k_loop, l_loop] := 0.0; L_input[k_loop, l_loop] := 0.0; U_input[k_loop, l_loop] := 0.0; eye_N_permuted[k_loop, l_loop] := 0.0; A_inverse_expected[k_loop, l_loop] := 0.0; A_inverse_actual[k_loop, l_loop] := 0.0; END_FOR END_FOR
+            n_test_size := 2;
+            L_input[1,1] := 1.0; L_input[1,2] := 0.0;
+            L_input[2,1] := 0.0; L_input[2,2] := 1.0;
+            U_input[1,1] := 1.0; U_input[1,2] := 1.0;
+            U_input[2,1] := 0.0; U_input[2,2] := 0.0;
+            P_indices[1] := 1; P_indices[2] := 2;
+
+            // Inlined CreatePermutationMatrix logic
+            FOR k_loop := 1 TO n_test_size DO FOR l_loop := 1 TO n_test_size DO eye_N_permuted[k_loop, l_loop] := 0.0; END_FOR END_FOR
+            FOR k_loop := 1 TO n_test_size DO IF P_indices[k_loop] >= 1 AND P_indices[k_loop] <= n_test_size THEN eye_N_permuted[k_loop, P_indices[k_loop]] := 1.0; END_IF END_FOR
+
+            LU_Inv_FB(nSize := n_test_size, L := L_input, u := U_input, eyeN := eye_N_permuted);
+            A_inverse_actual := LU_Inv_FB.a;
+            bTestPass := (ABS(A_inverse_actual[2,1] - 1.0) < fTolerance) AND 
+                         (ABS(A_inverse_actual[1,1] - 0.0) < fTolerance) AND
+                         (ABS(A_inverse_actual[2,2] - fLargeNumExpected) < fTolerance);
+            IF NOT bTestPass THEN sLastError := 'Test 5 (Special Singular) Failed conditions.'; END_IF
+
+            IF bTestPass THEN nPassCount := nPassCount + 1; ELSE nFailCount := nFailCount + 1; END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        ELSE // All tests are done
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+// Reset logic
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+    // Inlined ClearMatrices logic
+    FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO
+        P_indices[k_loop] := 0;
+        FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO
+            A_original[k_loop, l_loop] := 0.0;
+            L_input[k_loop, l_loop] := 0.0;
+            U_input[k_loop, l_loop] := 0.0;
+            eye_N_permuted[k_loop, l_loop] := 0.0;
+            A_inverse_expected[k_loop, l_loop] := 0.0;
+            A_inverse_actual[k_loop, l_loop] := 0.0;
+        END_FOR
+    END_FOR
+END_IF

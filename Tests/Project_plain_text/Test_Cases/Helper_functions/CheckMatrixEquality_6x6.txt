@@ -1,0 +1,19 @@
+FUNCTION CheckMatrixEquality_6x6 : BOOL
+VAR_INPUT
+    mat1 : POINTER TO ARRAY[1..6, 1..6] OF REAL;
+    mat2 : POINTER TO ARRAY[1..6, 1..6] OF REAL;
+    tolerance : REAL;
+END_VAR
+VAR
+    row_idx, col_idx : DINT;
+END_VAR
+    CheckMatrixEquality_6x6 := TRUE;
+    FOR row_idx := 1 TO 6 DO
+        FOR col_idx := 1 TO 6 DO
+            IF ABS(mat1^[row_idx, col_idx] - mat2^[row_idx, col_idx]) >= tolerance THEN
+                CheckMatrixEquality_6x6 := FALSE;
+                RETURN;
+            END_IF
+        END_FOR
+    END_FOR
+END_FUNCTION 

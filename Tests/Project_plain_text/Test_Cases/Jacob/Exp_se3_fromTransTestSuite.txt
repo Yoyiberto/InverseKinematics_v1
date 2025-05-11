@@ -1,0 +1,188 @@
+FUNCTION_BLOCK Exp_se3_fromTransTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    FB_UnderTest : Exp_se3_fromTrans; // Instance of the function block
+
+    // Test data
+    T_in_identity : ARRAY[1..4, 1..4] OF REAL;
+    expmat_expected_zero : ARRAY[1..4, 1..4] OF REAL;
+
+    T_in_pure_translation : ARRAY[1..4, 1..4] OF REAL; // Translate [1, 2, 3]
+    expmat_expected_pure_translation : ARRAY[1..4, 1..4] OF REAL;
+
+    T_in_pure_rotation : ARRAY[1..4, 1..4] OF REAL; // Rotate PI/2 around Z
+    expmat_expected_pure_rotation : ARRAY[1..4, 1..4] OF REAL;
+
+    T_in_screw : ARRAY[1..4, 1..4] OF REAL; // Result of screw: Rot PI around Z, Trans [0, 0, 2]
+    expmat_expected_screw : ARRAY[1..4, 1..4] OF REAL; // The original se3mat
+
+    expmat_out : ARRAY[1..4, 1..4] OF REAL;
+
+    i, j : DINT;
+    bTestPass : BOOL;
+    fEpsilon : REAL := 1E-5; // Tolerance for REAL comparisons (trig functions)
+    PI : REAL := 3.1415926535;
+END_VAR
+
+// Helper function
+FUNCTION CheckMatrixEquality_4x4 : BOOL
+VAR_INPUT
+    mat1 : POINTER TO ARRAY[1..4, 1..4] OF REAL;
+    mat2 : POINTER TO ARRAY[1..4, 1..4] OF REAL;
+    tolerance : REAL;
+END_VAR
+VAR
+    r, c : DINT;
+END_VAR
+    CheckMatrixEquality_4x4 := TRUE;
+    FOR r := 1 TO 4 DO
+        FOR c := 1 TO 4 DO
+            IF ABS(mat1^[r, c] - mat2^[r, c]) >= tolerance THEN
+                CheckMatrixEquality_4x4 := FALSE;
+                RETURN;
+            END_IF
+        END_FOR
+    END_FOR
+END_FUNCTION
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup test data
+            // Identity Transform -> Zero se3 matrix
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    IF i=j THEN 
+                        T_in_identity[i, j] := 1.0; 
+                    ELSE 
+                        T_in_identity[i, j] := 0.0;  
+                    END_IF 
+                END_FOR 
+            END_FOR
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    expmat_expected_zero[i, j] := 0.0; 
+                END_FOR 
+            END_FOR
+
+            // Pure Translation T: Rot=Identity, Pos=[1, 2, 3]
+            T_in_pure_translation := T_in_identity;
+            T_in_pure_translation[1, 4] := 1.0; T_in_pure_translation[2, 4] := 2.0; T_in_pure_translation[3, 4] := 3.0;
+            // Expected se3mat = [0 0 0 1; 0 0 0 2; 0 0 0 3; 0 0 0 0]
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    expmat_expected_pure_translation[i, j] := 0.0; 
+                END_FOR 
+            END_FOR
+            expmat_expected_pure_translation[1, 4] := 1.0;
+            expmat_expected_pure_translation[2, 4] := 2.0;
+            expmat_expected_pure_translation[3, 4] := 3.0;
+
+            // Pure Rotation T = Rot(Z, PI/2) = [0 -1 0 0; 1 0 0 0; 0 0 1 0; 0 0 0 1]
+            T_in_pure_rotation := T_in_identity;
+            T_in_pure_rotation[1, 1] := 0.0; T_in_pure_rotation[1, 2] := -1.0;
+            T_in_pure_rotation[2, 1] := 1.0; T_in_pure_rotation[2, 2] := 0.0;
+            // Expected se3mat = [0 -PI/2 0 0; PI/2 0 0 0; 0 0 0 0; 0 0 0 0]
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    expmat_expected_pure_rotation[i, j] := 0.0; 
+                END_FOR 
+            END_FOR
+            expmat_expected_pure_rotation[1, 2] := -PI / 2.0;
+            expmat_expected_pure_rotation[2, 1] := PI / 2.0;
+
+            // Screw Motion T: Rot(Z, PI), Pos = [0, 0, 2]
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    T_in_screw[i, j] := 0.0; 
+                END_FOR 
+            END_FOR
+            T_in_screw[1, 1] := -1.0; T_in_screw[1, 2] := 0.0;
+            T_in_screw[2, 1] := 0.0; T_in_screw[2, 2] := -1.0;
+            T_in_screw[3, 3] := 1.0;
+            T_in_screw[3, 4] := 2.0;
+            T_in_screw[4, 4] := 1.0;
+            // Expected se3mat = [0, -pi, 0, 0; pi, 0, 0, 0; 0, 0, 0, 2*PI/2]; // Should be [0 -pi 0 0; pi 0 0 0; 0 0 0 pi*v_z/(theta)]? -> [0 -pi 0 0; pi 0 0 0; 0 0 0 2]
+            // Recheck the formula: V = log(T) -> v = G*p
+            // expmat = [omgmat, v; 0, 0]
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    expmat_expected_screw[i, j] := 0.0; 
+                END_FOR 
+            END_FOR
+            expmat_expected_screw[1, 2] := -PI;
+            expmat_expected_screw[2, 1] := PI;
+            expmat_expected_screw[3, 4] := 2.0; // Check this calculation carefully based on FB internal logic
+
+            nCurrentTest := nCurrentTest + 1;
+
+        1: // Test with Identity Transform
+            FB_UnderTest(T := T_in_identity, expmat => expmat_out);
+            bTestPass := CheckMatrixEquality_4x4(mat1 := ADR(expmat_out), mat2 := ADR(expmat_expected_zero), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Exp_se3_fromTrans failed for Identity Transform';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        2: // Test with Pure Translation
+            FB_UnderTest(T := T_in_pure_translation, expmat => expmat_out);
+            bTestPass := CheckMatrixEquality_4x4(mat1 := ADR(expmat_out), mat2 := ADR(expmat_expected_pure_translation), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Exp_se3_fromTrans failed for Pure Translation';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        3: // Test with Pure Rotation
+            FB_UnderTest(T := T_in_pure_rotation, expmat => expmat_out);
+            bTestPass := CheckMatrixEquality_4x4(mat1 := ADR(expmat_out), mat2 := ADR(expmat_expected_pure_rotation), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Exp_se3_fromTrans failed for Pure Rotation';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        4: // Test with Screw Motion Transform
+            FB_UnderTest(T := T_in_screw, expmat => expmat_out);
+            bTestPass := CheckMatrixEquality_4x4(mat1 := ADR(expmat_out), mat2 := ADR(expmat_expected_screw), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Exp_se3_fromTrans failed for Screw Motion Transform';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF
+ENDFUNCTION_BLOCK 

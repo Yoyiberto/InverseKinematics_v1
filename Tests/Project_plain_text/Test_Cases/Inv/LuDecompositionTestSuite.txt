@@ -1,0 +1,451 @@
+FUNCTION_BLOCK LuDecompositionTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING(255); // Last error message, increased size
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    LU_Decomp_FB : LuDecomposition; // Instance of the LuDecomposition function block
+
+    // Test matrices and expected results
+    A_test     : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    L_expected : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    U_expected : ARRAY[1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+    P_expected : ARRAY[1..GVL.MAX_INV_SIZE] OF DINT;
+
+    n_test_size : DINT; // Current size of the matrix for the test
+    bSingular_expected : BOOL; // Expected singularity status
+
+    fTolerance : REAL := 1E-6; // Tolerance for REAL comparisons
+
+    // Internal test state variables
+    bTestPass       : BOOL;
+    bMatrixL_Pass   : BOOL;
+    bMatrixU_Pass   : BOOL;
+    bPivot_Pass     : BOOL;
+    bFlags_Pass     : BOOL;
+    k_loop, l_loop  : DINT; // Loop counters for matrix operations and comparisons
+END_VAR
+
+// Main execution logic
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Initial setup: Clear previous error and proceed to the first test
+            sLastError := '';
+            nCurrentTest := 1;
+
+        1: // Test Case 1: Simple 2x2 No Pivoting -> Corrected for Pivoting
+            n_test_size := 2;
+            bSingular_expected := FALSE;
+
+            // A = [[4, 3], [6, 3]] -> Pivots to PA = [[6,3],[4,3]]
+            A_test[1,1] := 4.0; A_test[1,2] := 3.0;
+            A_test[2,1] := 6.0; A_test[2,2] := 3.0;
+
+            // Expected P_indices = [2, 1] (swap row 1 and 2)
+            P_expected[1] := 2; P_expected[2] := 1;
+
+            // Expected L for PA: L = [[1, 0], [2/3, 1]]
+            L_expected[1,1] := 1.0;       L_expected[1,2] := 0.0;
+            L_expected[2,1] := 2.0/3.0; L_expected[2,2] := 1.0; // Approx 0.6666667
+
+            // Expected U for PA: U = [[6, 3], [0, 1]]
+            U_expected[1,1] := 6.0; U_expected[1,2] := 3.0;
+            U_expected[2,1] := 0.0; U_expected[2,2] := 1.0;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bFlags_Pass := (LU_Decomp_FB.bSingular = bSingular_expected);
+            IF NOT bSingular_expected AND bFlags_Pass THEN
+                bMatrixL_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.L[k_loop, l_loop] - L_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixL_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixL_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bMatrixU_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.U[k_loop, l_loop] - U_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixU_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixU_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bPivot_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    IF LU_Decomp_FB.P_indices[k_loop] <> P_expected[k_loop] THEN
+                        bPivot_Pass := FALSE; EXIT;
+                    END_IF
+                END_FOR
+                bTestPass := bMatrixL_Pass AND bMatrixU_Pass AND bPivot_Pass;
+            ELSE
+                bTestPass := bFlags_Pass; // If singular expected, only check flag
+            END_IF
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 1 (2x2 Pivot Corrected) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        2: // Test Case 2: 2x2 With Pivoting
+            n_test_size := 2;
+            bSingular_expected := FALSE;
+
+            // A = [[1, 2], [3, 4]] -> PA = [[3,4], [1,2]]
+            A_test[1,1] := 1.0; A_test[1,2] := 2.0;
+            A_test[2,1] := 3.0; A_test[2,2] := 4.0;
+
+            // Expected P_indices = [2, 1] (swap row 1 and 2)
+            P_expected[1] := 2; P_expected[2] := 1;
+
+            // Expected L for PA: L = [[1, 0], [1/3, 1]]
+            L_expected[1,1] := 1.0; L_expected[1,2] := 0.0;
+            L_expected[2,1] := 1.0/3.0; L_expected[2,2] := 1.0;
+
+            // Expected U for PA: U = [[3, 4], [0, 2/3]]
+            U_expected[1,1] := 3.0; U_expected[1,2] := 4.0;
+            U_expected[2,1] := 0.0; U_expected[2,2] := 2.0/3.0;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bFlags_Pass := (LU_Decomp_FB.bSingular = bSingular_expected);
+            IF NOT bSingular_expected AND bFlags_Pass THEN
+                bMatrixL_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.L[k_loop, l_loop] - L_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixL_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixL_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bMatrixU_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.U[k_loop, l_loop] - U_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixU_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixU_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bPivot_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    IF LU_Decomp_FB.P_indices[k_loop] <> P_expected[k_loop] THEN
+                        bPivot_Pass := FALSE; EXIT;
+                    END_IF
+                END_FOR
+                bTestPass := bMatrixL_Pass AND bMatrixU_Pass AND bPivot_Pass;
+            ELSE
+                bTestPass := bFlags_Pass;
+            END_IF
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 2 (2x2 Pivot) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        3: // Test Case 3: 3x3 Matrix with Pivoting (Corrected U[3,3])
+            // A = [[1,1,-1], [1,2,-2], [-2,1,1]]
+            // P_indices expected = [3,2,1]
+            // L = [[1,0,0], [-0.5,1,0], [-0.5,0.6,1]]
+            // U = [[-2,1,1], [0,2.5,-1.5], [0,0,0.4]] <--- U[3,3] corrected
+            n_test_size := 3;
+            bSingular_expected := FALSE;
+
+            A_test[1,1] := 1.0; A_test[1,2] := 1.0; A_test[1,3] := -1.0;
+            A_test[2,1] := 1.0; A_test[2,2] := 2.0; A_test[2,3] := -2.0;
+            A_test[3,1] := -2.0; A_test[3,2] := 1.0; A_test[3,3] := 1.0;
+
+            P_expected[1] := 3; P_expected[2] := 2; P_expected[3] := 1;
+
+            L_expected[1,1] := 1.0;   L_expected[1,2] := 0.0;   L_expected[1,3] := 0.0;
+            L_expected[2,1] := -0.5;  L_expected[2,2] := 1.0;   L_expected[2,3] := 0.0;
+            L_expected[3,1] := -0.5;  L_expected[3,2] := 0.6;   L_expected[3,3] := 1.0;
+
+            U_expected[1,1] := -2.0;  U_expected[1,2] := 1.0;   U_expected[1,3] := 1.0;
+            U_expected[2,1] := 0.0;   U_expected[2,2] := 2.5;   U_expected[2,3] := -1.5;
+            U_expected[3,1] := 0.0;   U_expected[3,2] := 0.0;   U_expected[3,3] := 0.4; // Corrected from -0.2
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bFlags_Pass := (LU_Decomp_FB.bSingular = bSingular_expected);
+            IF NOT bSingular_expected AND bFlags_Pass THEN
+                bMatrixL_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.L[k_loop, l_loop] - L_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixL_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixL_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bMatrixU_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.U[k_loop, l_loop] - U_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixU_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixU_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bPivot_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    IF LU_Decomp_FB.P_indices[k_loop] <> P_expected[k_loop] THEN
+                        bPivot_Pass := FALSE; EXIT;
+                    END_IF
+                END_FOR
+                bTestPass := bMatrixL_Pass AND bMatrixU_Pass AND bPivot_Pass;
+            ELSE
+                bTestPass := bFlags_Pass;
+            END_IF
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 3 (3x3 Pivot, U corrected) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        4: // Test Case 4: Singular 2x2 Matrix
+            n_test_size := 2;
+            bSingular_expected := TRUE;
+
+            // A = [[1, 2], [2, 4]]
+            A_test[1,1] := 1.0; A_test[1,2] := 2.0;
+            A_test[2,1] := 2.0; A_test[2,2] := 4.0;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bTestPass := (LU_Decomp_FB.bSingular = bSingular_expected);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 4 (Singular 2x2) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        5: // Test Case 5: Identity 3x3 Matrix
+            n_test_size := 3;
+            bSingular_expected := FALSE;
+
+            FOR k_loop := 1 TO n_test_size DO
+                P_expected[k_loop] := k_loop;
+                FOR l_loop := 1 TO n_test_size DO
+                    IF k_loop = l_loop THEN
+                        A_test[k_loop, l_loop] := 1.0;
+                        L_expected[k_loop, l_loop] := 1.0;
+                        U_expected[k_loop, l_loop] := 1.0;
+                    ELSE
+                        A_test[k_loop, l_loop] := 0.0;
+                        L_expected[k_loop, l_loop] := 0.0;
+                        U_expected[k_loop, l_loop] := 0.0;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bFlags_Pass := (LU_Decomp_FB.bSingular = bSingular_expected);
+            IF NOT bSingular_expected AND bFlags_Pass THEN
+                bMatrixL_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.L[k_loop, l_loop] - L_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixL_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixL_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bMatrixU_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.U[k_loop, l_loop] - U_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixU_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixU_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bPivot_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    IF LU_Decomp_FB.P_indices[k_loop] <> P_expected[k_loop] THEN
+                        bPivot_Pass := FALSE; EXIT;
+                    END_IF
+                END_FOR
+                bTestPass := bMatrixL_Pass AND bMatrixU_Pass AND bPivot_Pass;
+            ELSE
+                bTestPass := bFlags_Pass;
+            END_IF
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 5 (Identity 3x3) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        6: // Test Case 6: 1x1 Matrix
+            n_test_size := 1;
+            bSingular_expected := FALSE;
+
+            A_test[1,1] := 5.0;
+            L_expected[1,1] := 1.0;
+            U_expected[1,1] := 5.0;
+            P_expected[1] := 1;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+            
+            bFlags_Pass := (LU_Decomp_FB.bSingular = bSingular_expected);
+            IF NOT bSingular_expected AND bFlags_Pass THEN
+                bMatrixL_Pass := ABS(LU_Decomp_FB.L[1,1] - L_expected[1,1]) <= fTolerance;
+                bMatrixU_Pass := ABS(LU_Decomp_FB.U[1,1] - U_expected[1,1]) <= fTolerance;
+                bPivot_Pass := LU_Decomp_FB.P_indices[1] = P_expected[1];
+                bTestPass := bMatrixL_Pass AND bMatrixU_Pass AND bPivot_Pass;
+            ELSE
+                bTestPass := bFlags_Pass;
+            END_IF
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 6 (1x1 Matrix) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        7: // Test Case 7: 3x3 Known LU without pivoting -> Corrected for Pivoting
+            // A = [[2, 1, -1], [-3, -1, 2], [-2, 1, 2]] -> Pivots with P=[2,1,3]
+            // L for PA = [[1,0,0],[-2/3,1,0],[2/3,5,1]]
+            // U for PA = [[-3,-1,2],[0,1/3,1/3],[0,0,-1]]
+            n_test_size := 3;
+            bSingular_expected := FALSE;
+
+            A_test[1,1] := 2.0;  A_test[1,2] := 1.0;  A_test[1,3] := -1.0;
+            A_test[2,1] := -3.0; A_test[2,2] := -1.0; A_test[2,3] := 2.0;
+            A_test[3,1] := -2.0; A_test[3,2] := 1.0;  A_test[3,3] := 2.0;
+
+            P_expected[1] := 2; P_expected[2] := 1; P_expected[3] := 3;
+
+            L_expected[1,1] := 1.0;        L_expected[1,2] := 0.0;       L_expected[1,3] := 0.0;
+            L_expected[2,1] := -2.0/3.0;   L_expected[2,2] := 1.0;       L_expected[2,3] := 0.0; // Approx -0.6666667
+            L_expected[3,1] := 2.0/3.0;    L_expected[3,2] := 5.0;       L_expected[3,3] := 1.0; // Approx 0.6666667
+
+            U_expected[1,1] := -3.0;       U_expected[1,2] := -1.0;      U_expected[1,3] := 2.0;
+            U_expected[2,1] := 0.0;        U_expected[2,2] := 1.0/3.0;   U_expected[2,3] := 1.0/3.0; // Approx 0.3333333
+            U_expected[3,1] := 0.0;        U_expected[3,2] := 0.0;       U_expected[3,3] := -1.0;
+            
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bFlags_Pass := (LU_Decomp_FB.bSingular = bSingular_expected);
+            IF NOT bSingular_expected AND bFlags_Pass THEN
+                bMatrixL_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.L[k_loop, l_loop] - L_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixL_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixL_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bMatrixU_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    FOR l_loop := 1 TO n_test_size DO
+                        IF ABS(LU_Decomp_FB.U[k_loop, l_loop] - U_expected[k_loop, l_loop]) > fTolerance THEN
+                            bMatrixU_Pass := FALSE; EXIT;
+                        END_IF
+                    END_FOR
+                    IF NOT bMatrixU_Pass THEN EXIT; END_IF
+                END_FOR
+
+                bPivot_Pass := TRUE;
+                FOR k_loop := 1 TO n_test_size DO
+                    IF LU_Decomp_FB.P_indices[k_loop] <> P_expected[k_loop] THEN
+                        bPivot_Pass := FALSE; EXIT;
+                    END_IF
+                END_FOR
+                bTestPass := bMatrixL_Pass AND bMatrixU_Pass AND bPivot_Pass;
+            ELSE
+                bTestPass := bFlags_Pass;
+            END_IF
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 7 (3x3 Pivot Corrected) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        8: // Test Case 8: Singular 3x3 Matrix
+            n_test_size := 3;
+            bSingular_expected := TRUE;
+
+            // A = [[1,2,3], [4,5,6], [7,8,9]]
+            A_test[1,1] := 1.0; A_test[1,2] := 2.0; A_test[1,3] := 3.0;
+            A_test[2,1] := 4.0; A_test[2,2] := 5.0; A_test[2,3] := 6.0;
+            A_test[3,1] := 7.0; A_test[3,2] := 8.0; A_test[3,3] := 9.0;
+
+            LU_Decomp_FB(nSize := n_test_size, A := A_test);
+
+            bTestPass := (LU_Decomp_FB.bSingular = bSingular_expected);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Test 8 (Singular 3x3) Failed.';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        ELSE // All tests are done or an invalid test number
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+// Reset logic when bExecute is FALSE
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+    
+    // Optionally clear test matrices if they are large and memory is a concern,
+    // but generally not needed as they are overwritten.
+    FOR k_loop := 1 TO GVL.MAX_INV_SIZE DO
+        P_expected[k_loop] := 0;
+        FOR l_loop := 1 TO GVL.MAX_INV_SIZE DO
+            A_test[k_loop, l_loop] := 0.0;
+            L_expected[k_loop, l_loop] := 0.0;
+            U_expected[k_loop, l_loop] := 0.0;
+        END_FOR
+    END_FOR
+END_IF
+END_FUNCTION_BLOCK

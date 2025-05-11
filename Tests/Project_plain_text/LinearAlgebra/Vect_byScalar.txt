@@ -1,0 +1,17 @@
+FUNCTION_BLOCK Vect_byScalar
+VAR_IN_OUT
+	Vector:ARRAY[*] OF REAL;
+	scalar:REAL;
+	VectorByScalar:ARRAY[*] OF REAL;
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	i:DINT;
+	
+END_VAR
+
+FOR i:=1 TO UPPER_BOUND(Vector,1) DO
+	VectorByScalar[i]:=Vector[i]*scalar;
+
+END_FOR

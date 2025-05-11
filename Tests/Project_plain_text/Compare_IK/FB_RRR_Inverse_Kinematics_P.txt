@@ -1,0 +1,96 @@
+(*
+--------------------------------------------------------------------------------
+Function Block: FB_RRR_Inverse_Kinematics
+Description: Calculates the inverse kinematics for a 3-link planar RRR manipulator.
+             Given a target position (Px, Py) and orientation (Phi) for the end-effector,
+             and link lengths (link_a, link_b, link_c), it computes the joint angles (q1, q2, q3).
+--------------------------------------------------------------------------------
+*)
+FUNCTION_BLOCK FB_RRR_Inverse_Kinematics
+VAR_INPUT
+    Px_target    : LREAL := 0.0; // Target X position of the end-effector
+    Py_target    : LREAL := 0.0; // Target Y position of the end-effector
+    Phi_target   : LREAL := 0.0; // Target orientation of the end-effector (radians, relative to X-axis of base frame)
+    link_a       : LREAL := 1.0; // Length of the first link (dimension 'a')
+    link_b       : LREAL := 1.0; // Length of the second link (dimension 'b')
+    link_c       : LREAL := 1.0; // Length of the third link, from wrist to TCP (dimension 'c')
+    Elbow_Up     : BOOL  := TRUE; // Selects elbow up (TRUE) or elbow down (FALSE) solution for the wrist positioning
+END_VAR
+VAR_OUTPUT
+    q1           : LREAL := 0.0; // Joint angle 1 (radians)
+    q2           : LREAL := 0.0; // Joint angle 2 (radians)
+    q3           : LREAL := 0.0; // Joint angle 3 (radians)
+    is_reachable : BOOL  := FALSE;// Flag indicating if the target is reachable
+END_VAR
+VAR
+    Px_wrist     : LREAL;         // X-coordinate of the wrist (end of link_b)
+    Py_wrist     : LREAL;         // Y-coordinate of the wrist (end of link_b)
+    dist_sq_wrist: LREAL;         // Squared distance from origin to wrist
+    cos_q2_num   : LREAL;         // Numerator for calculating cos(q2)
+    cos_q2_den   : LREAL;         // Denominator for calculating cos(q2)
+    cos_q2_val   : LREAL;         // Value of cos(q2)
+    sin_q2_val   : LREAL;         // Value of sin(q2)
+    k1_for_q1    : LREAL;         // Intermediate variable for q1 calculation: link_a + link_b * cos(q2)
+    k2_for_q1    : LREAL;         // Intermediate variable for q1 calculation: link_b * sin(q2)
+    sqrt_arg     : LREAL;         // Argument for SQRT function, checked for non-negativity
+END_VAR
+
+// --- Function Block Body ---
+
+// 1. Calculate the position of the wrist (Px_wrist, Py_wrist)
+Px_wrist := Px_target - link_c * COS(Phi_target);
+Py_wrist := Py_target - link_c * SIN(Phi_target);
+
+// 2. Solve inverse kinematics for the first two links (link_a, link_b) to reach (Px_wrist, Py_wrist)
+dist_sq_wrist := Px_wrist * Px_wrist + Py_wrist * Py_wrist;
+
+IF link_a <= 1E-6 OR link_b <= 1E-6 THEN // Link lengths must be positive (added small tolerance)
+    is_reachable := FALSE;
+    q1 := 0.0;
+    q2 := 0.0;
+    q3 := 0.0;
+    RETURN;
+END_IF
+
+cos_q2_den := 2.0 * link_a * link_b;
+
+cos_q2_num := dist_sq_wrist - link_a * link_a - link_b * link_b;
+cos_q2_val := cos_q2_num / cos_q2_den;
+
+IF (cos_q2_val > 1.000001) OR (cos_q2_val < -1.000001) THEN
+    is_reachable := FALSE;
+    q1 := 0.0;
+    q2 := 0.0;
+    q3 := 0.0;
+ELSE
+    is_reachable := TRUE;
+    
+    IF cos_q2_val > 1.0 THEN
+        cos_q2_val := 1.0;
+    ELSIF cos_q2_val < -1.0 THEN
+        cos_q2_val := -1.0;
+    END_IF
+    
+    sqrt_arg := 1.0 - cos_q2_val * cos_q2_val;
+    IF sqrt_arg < 0.0 THEN 
+        sqrt_arg := 0.0;
+    END_IF
+
+    IF Elbow_Up THEN
+        sin_q2_val := SQRT(sqrt_arg);
+    ELSE
+        sin_q2_val := -SQRT(sqrt_arg);
+    END_IF
+
+    q2 := BASIC.ATAN2(sin_q2_val, cos_q2_val);
+
+    k1_for_q1 := link_a + link_b * cos_q2_val;
+    k2_for_q1 := link_b * sin_q2_val;
+    
+    q1 := BASIC.ATAN2(Py_wrist, Px_wrist) - BASIC.ATAN2(k2_for_q1, k1_for_q1);
+
+    q3 := Phi_target - q1 - q2;
+
+END_IF
+
+END_FUNCTION_BLOCK 

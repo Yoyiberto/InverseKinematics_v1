@@ -1,0 +1,154 @@
+// IMPORTANT: Ensure GVL.nJoints=2, GVL.pInv_dim1=6, GVL.pInv_dim2=2 for this test case
+FUNCTION_BLOCK getInvKinematics_BodyTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    FB_UnderTest : getInvKinematics_Body; // Instance of the function block
+
+    // Test data - Planar 2R Robot (L1=1, L2=1)
+    M_2R : ARRAY[1..4, 1..4] OF REAL;
+    Blist_2R : ARRAY[1..6, 1..2] OF REAL; // 6xN, N=2 joints
+    T_target_reachable : ARRAY[1..4, 1..4] OF REAL; // Target: (x=1, y=1), Orientation=0
+    T_target_unreachable : ARRAY[1..4, 1..4] OF REAL; // Target: (x=3, y=0)
+
+    thetalist0_guess : ARRAY[1..2] OF REAL;
+    thetalist_out : ARRAY[1..2] OF REAL;
+    thetalist_expected_reachable : ARRAY[1..2] OF REAL; // Expected for reachable target [PI/2, -PI/2]
+
+    eomg_test : REAL := 0.01;
+    ev_test : REAL := 0.001;
+
+    i, j : DINT;
+    bTestPass : BOOL;
+    fEpsilon : REAL := 1E-3; // Tolerance for joint angles
+    PI : REAL := 3.1415926535;
+END_VAR
+
+
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup test data for Planar 2R Robot
+            // M: Home configuration (end effector at x=2, y=0, z=0)
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    IF i=j THEN 
+                        M_2R[i, j] := 1.0; 
+                    ELSE 
+                        M_2R[i, j] := 0.0;  
+                    END_IF 
+                END_FOR 
+            END_FOR
+            M_2R[1, 4] := 2.0; // L1 + L2
+
+            // Blist: Screw axes in body frame at home config
+            // Corrected individual assignment
+            // Joint 1 (Z-axis rotation at origin)
+            Blist_2R[1, 1] := 0.0; Blist_2R[2, 1] := 0.0; Blist_2R[3, 1] := 1.0; Blist_2R[4, 1] := 0.0; Blist_2R[5, 1] := -2.0; Blist_2R[6, 1] := 0.0; // w = [0,0,1], v = -w x q = -[0,0,1] x [2,0,0] = [0, -2, 0]
+            // Joint 2 (Z-axis rotation at end of link 1)
+            Blist_2R[1, 2] := 0.0; Blist_2R[2, 2] := 0.0; Blist_2R[3, 2] := 1.0; Blist_2R[4, 2] := 0.0; Blist_2R[5, 2] := -1.0; Blist_2R[6, 2] := 0.0; // w = [0,0,1], v = -w x q = -[0,0,1] x [1,0,0] = [0, -1, 0]
+
+            // Target Reachable: T = (x=1, y=1, orientation=0) = (sqrt(2) at 45deg)
+            // Corresponds roughly to theta = [PI/2, -PI/2]
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    IF i=j THEN 
+                        T_target_reachable[i, j] := 1.0; 
+                    ELSE 
+                        T_target_reachable[i, j] := 0.0;  
+                    END_IF 
+                END_FOR 
+            END_FOR
+            T_target_reachable[1, 4] := 1.0;
+            T_target_reachable[2, 4] := 1.0;
+            // Expected angles for this target
+            thetalist_expected_reachable[1] := PI / 2.0;
+            thetalist_expected_reachable[2] := -PI / 2.0;
+
+            // Target Unreachable: (x=3, y=0)
+            FOR i := 1 TO 4 DO 
+                FOR j := 1 TO 4 DO 
+                    IF i=j THEN 
+                        T_target_unreachable[i, j] := 1.0; 
+                    ELSE 
+                        T_target_unreachable[i, j] := 0.0;  
+                    END_IF 
+                END_FOR 
+            END_FOR
+            T_target_unreachable[1, 4] := 3.0;
+
+            // Initial guess
+            thetalist0_guess[1] := 0.1; thetalist0_guess[2] := 0.1;
+
+            nCurrentTest := nCurrentTest + 1;
+
+        1: // Test with Reachable Target
+            thetalist_out := thetalist0_guess; // Copy initial guess
+            FB_UnderTest(M := M_2R,
+                         T := T_target_reachable,
+                         eomg := eomg_test,
+                         ev := ev_test,
+                         Blist := Blist_2R,
+                         thetalist0 := thetalist0_guess,
+                         thetalist := thetalist_out);
+
+            // Check success flag and if the resulting angles are close to expected
+            // Angle comparison needs care due to potential multiple solutions and wrapping
+            // We check against ONE known solution here.
+            bTestPass := FB_UnderTest.success AND
+                       CheckVectorEquality_N(
+											vec1:= thetalist_out, 
+											vec2:= thetalist_expected_reachable, 
+											N:= 2, 
+											tolerance:= fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := CONCAT('getInvKinematics_Body failed for Reachable Target. Success=', BOOL_TO_STRING(FB_UnderTest.success));
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        2: // Test with Unreachable Target
+             thetalist_out := thetalist0_guess; // Copy initial guess
+             FB_UnderTest(M := M_2R,
+                         T := T_target_unreachable,
+                         eomg := eomg_test,
+                         ev := ev_test,
+                         Blist := Blist_2R,
+                         thetalist0 := thetalist0_guess,
+                         thetalist := thetalist_out);
+
+            // Should fail (success = FALSE)
+            bTestPass := NOT FB_UnderTest.success;
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'getInvKinematics_Body did not report failure for Unreachable Target';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF 

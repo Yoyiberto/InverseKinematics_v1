@@ -1,0 +1,69 @@
+FUNCTION_BLOCK MatMul
+VAR_INPUT
+	r1: DINT; (* Number of rows for mat1 *)
+	c1r2: DINT; (* Number of columns for mat1 AND number of rows for mat2 *)
+	c2: DINT; (* Number of columns for mat2 *)
+END_VAR
+VAR_OUTPUT
+	Error:STRING;
+	is_valid: BOOL := TRUE;
+END_VAR
+VAR_IN_OUT
+	mat1:ARRAY [*,*] OF REAL;
+	mat2:ARRAY [*,*] OF REAL;
+	MatResult:ARRAY [*,*] OF REAL;
+END_VAR
+VAR
+	i:DINT;
+	j:DINT;
+	k:DINT;
+	(* Internal dimension variables are no longer needed from UPPER_BOUND *)
+	res_check_rows:DINT;
+	res_check_cols:DINT;
+END_VAR
+
+Error := '';
+is_valid := TRUE;
+
+// Use passed-in dimensions instead of UPPER_BOUND for logic
+IF r1 <= 0 OR c1r2 <= 0 OR c2 <= 0 THEN
+    Error := 'Invalid input dimensions r1, c1r2, or c2';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+// Check if the provided VAR_IN_OUT arrays are large enough
+IF UPPER_BOUND(mat1, 1) < r1 OR UPPER_BOUND(mat1, 2) < c1r2 THEN
+    Error := 'mat1 array too small for specified dimensions';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+IF UPPER_BOUND(mat2, 1) < c1r2 OR UPPER_BOUND(mat2, 2) < c2 THEN
+    Error := 'mat2 array too small for specified dimensions';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+res_check_rows := UPPER_BOUND(MatResult, 1);
+res_check_cols := UPPER_BOUND(MatResult, 2);
+IF res_check_rows < r1 OR res_check_cols < c2 THEN
+    Error := 'MatResult array too small for specified dimensions';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+    // The core condition mat1_cols = mat2_rows is now implicit in c1r2
+    // Initialize result matrix (up to r1 x c2)
+    FOR i:=1 TO r1 DO
+        FOR j:=1 TO c2 DO
+            MatResult[i,j] := 0;
+        END_FOR
+    END_FOR
+    
+    // Perform multiplication using specified dimensions
+    FOR i:=1 TO r1 DO
+        FOR j:=1 TO c2 DO
+            FOR k:=1 TO c1r2 DO // Iterate up to common dimension c1r2
+                MatResult[i,j] := MatResult[i,j] + mat1[i,k] * mat2[k,j];
+            END_FOR;
+        END_FOR
+    END_FOR

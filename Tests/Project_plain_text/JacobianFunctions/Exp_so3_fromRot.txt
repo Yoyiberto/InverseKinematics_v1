@@ -1,0 +1,80 @@
+FUNCTION_BLOCK Exp_so3_fromRot
+VAR_INPUT
+	Rot:ARRAY [1..3,1..3] OF REAL;
+END_VAR
+VAR_OUTPUT
+	so3mat:ARRAY [1..3,1..3] OF REAL;
+END_VAR
+VAR
+	Trace:Trace;
+	isValueNegligible:isValueNegligible;
+	Mat_byScalar:Mat_byScalar;
+	Vect_byScalar:Vect_byScalar;
+	angVelToSkewSymMatrix:angVelToSkewSymMatrix;
+	Trace_R:REAL;
+	acosinput:REAL;
+	i:DINT;
+	j:DINT;
+	omg:ARRAY [1..3] OF REAL;
+	pi:REAL:=3.14159265359;
+	pi_omg:ARRAY [1..3] OF REAL;
+	theta:REAL;
+	temp_scalar:REAL;
+	Rot_temp:ARRAY [1..3,1..3] OF REAL;
+END_VAR
+
+Trace(Matrix:=Rot , trace=> Trace_R);
+acosinput := (Trace_R- 1) / 2;
+
+IF acosinput >= 1 THEN
+	i:=1;j:=1;
+	FOR i:=1 TO UPPER_BOUND(so3mat,1) DO
+		FOR j:=1 TO UPPER_BOUND(so3mat,2) DO
+			so3mat[i,j] := 0;
+		END_FOR
+	END_FOR
+		
+	
+ELSIF acosinput <= -1 THEN
+	
+    IF (1 + Rot[3, 3])>0.0000001 THEN
+		
+		omg[1]:= (1 / SQRT(2 * (1 + Rot[3,3])))*Rot[1, 3];
+		omg[2]:= (1 / SQRT(2 * (1 + Rot[3,3])))*Rot[2, 3]; 
+		omg[3]:= (1 / SQRT(2 * (1 + Rot[3,3])))*(1 + Rot[3, 3]);
+
+
+    ELSIF (1 + Rot[2, 2])>0.0000001 THEN
+		omg[1]:= (1 / SQRT(2 * (1 + Rot[2,2])))*Rot[1, 2];
+		omg[2]:= (1 / SQRT(2 * (1 + Rot[2,2])))*(1 + Rot[2, 2]); 
+		omg[3]:= (1 / SQRT(2 * (1 + Rot[2,2])))*Rot[3, 2];
+	
+    ELSE
+		omg[1]:= (1 / SQRT(2 * (1 + Rot[1,1])))*(1 + Rot[1, 1]);
+		omg[2]:= (1 / SQRT(2 * (1 + Rot[1,1])))*Rot[2, 1];
+		omg[3]:= (1 / SQRT(2 * (1 + Rot[1,1])))*Rot[3, 1];
+	
+    END_IF
+	
+	Vect_byScalar(Vector:= omg, scalar:= pi, 
+			VectorByScalar:= pi_omg);
+	
+	angVelToSkewSymMatrix(omg:= pi_omg,
+	 	so3mat=>so3mat );
+ELSE
+	theta := ACOS(acosinput);
+	temp_scalar:= theta * (1 / (2 * SIN(theta)));
+	
+	
+	
+	i:=1;j:=1;	
+	FOR i:=1 TO UPPER_BOUND(Rot,1) DO
+		FOR j:=1 TO UPPER_BOUND(Rot,2) DO
+			Rot_temp[i,j]:=Rot[i,j]-Rot[j,i];
+		END_FOR
+	END_FOR
+	
+	Mat_byScalar(Matrix:=Rot_temp, scalar:= temp_scalar, 
+			MatrixByScalar:= so3mat);
+
+END_IF

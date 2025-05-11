@@ -1,0 +1,155 @@
+FUNCTION_BLOCK LinAlgTestFramework
+VAR_INPUT
+    bRunTests : BOOL; // Trigger to run all linear algebra test suites
+END_VAR
+VAR_OUTPUT
+    bAllDone : BOOL; // All test suites completed
+    nTotalPassed : INT; // Total passed tests
+    nTotalFailed : INT; // Total failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    sCurrentSuite : STRING;
+    nCurrentSuite : INT := 0;
+    
+    // LinAlg tests
+    EyeTests : EyeTestSuite;
+    MatMulTests : MatMulTestSuite;
+    TraceTests : TraceTestSuite;
+    VectScalTests : VectByScalarTestSuite;
+    NormTests : NormTestSuite;
+    MatScalTests : MatByScalarTestSuite;
+    TransposeTests : TransposeTestSuite;
+END_VAR
+
+// Main execution code
+IF bRunTests AND NOT bAllDone THEN
+    CASE nCurrentSuite OF
+        0: // Initialize
+            nTotalPassed := 0;
+            nTotalFailed := 0;
+            sLastError := '';
+            sCurrentSuite := '';
+            nCurrentSuite := nCurrentSuite + 1;
+            
+        // --- LinAlg Tests ---    
+        1: // Run Eye tests
+            sCurrentSuite := 'Eye Tests'; 
+            EyeTests(bExecute := TRUE);
+            
+            IF EyeTests.bDone THEN
+                nTotalPassed := nTotalPassed + EyeTests.nPassCount;
+                nTotalFailed := nTotalFailed + EyeTests.nFailCount;
+                
+                IF EyeTests.nFailCount > 0 AND sLastError = '' THEN 
+                    sLastError := CONCAT('Eye: ', EyeTests.sLastError); 
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        2: // Run MatMul tests
+            sCurrentSuite := 'MatMul Tests'; 
+            MatMulTests(bExecute := TRUE);
+            
+            IF MatMulTests.bDone THEN
+                nTotalPassed := nTotalPassed + MatMulTests.nPassCount;
+                nTotalFailed := nTotalFailed + MatMulTests.nFailCount;
+                
+                IF MatMulTests.nFailCount > 0 AND sLastError = '' THEN 
+                    sLastError := CONCAT('MatMul: ', MatMulTests.sLastError); 
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        3: // Run Trace tests
+            sCurrentSuite := 'Trace Tests'; 
+            TraceTests(bExecute := TRUE);
+            
+            IF TraceTests.bDone THEN
+                nTotalPassed := nTotalPassed + TraceTests.nPassCount;
+                nTotalFailed := nTotalFailed + TraceTests.nFailCount;
+                
+                IF TraceTests.nFailCount > 0 AND sLastError = '' THEN 
+                    sLastError := CONCAT('Trace: ', TraceTests.sLastError); 
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        4: // Run VectScal tests
+            sCurrentSuite := 'VectScal Tests';
+            VectScalTests(bExecute := TRUE);
+            
+            IF VectScalTests.bDone THEN
+                nTotalPassed := nTotalPassed + VectScalTests.nPassCount;
+                nTotalFailed := nTotalFailed + VectScalTests.nFailCount;
+                
+                IF VectScalTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('VectScal: ', VectScalTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        5: // Run Norm tests
+            sCurrentSuite := 'Norm Tests';
+            NormTests(bExecute := TRUE);
+            
+            IF NormTests.bDone THEN
+                nTotalPassed := nTotalPassed + NormTests.nPassCount;
+                nTotalFailed := nTotalFailed + NormTests.nFailCount;
+                
+                IF NormTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('Norm: ', NormTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        6: // Run MatScal tests
+            sCurrentSuite := 'MatScal Tests';
+            MatScalTests(bExecute := TRUE);
+            
+            IF MatScalTests.bDone THEN
+                nTotalPassed := nTotalPassed + MatScalTests.nPassCount;
+                nTotalFailed := nTotalFailed + MatScalTests.nFailCount;
+                
+                IF MatScalTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('MatScal: ', MatScalTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        7: // Run Transpose tests
+            sCurrentSuite := 'Transpose Tests';
+            TransposeTests(bExecute := TRUE);
+            
+            IF TransposeTests.bDone THEN
+                nTotalPassed := nTotalPassed + TransposeTests.nPassCount;
+                nTotalFailed := nTotalFailed + TransposeTests.nFailCount;
+                
+                IF TransposeTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('Transpose: ', TransposeTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        // --- Completion ---    
+        8: // All tests complete
+            bAllDone := TRUE;
+            sCurrentSuite := '';
+            nCurrentSuite := 0; // Reset for next run
+    END_CASE
+ELSIF NOT bRunTests THEN
+    // Reset state if bRunTests is FALSE
+    bAllDone := FALSE;
+    nTotalPassed := 0;
+    nTotalFailed := 0;
+    sLastError := '';
+    sCurrentSuite := '';
+    nCurrentSuite := 0;
+END_IF 

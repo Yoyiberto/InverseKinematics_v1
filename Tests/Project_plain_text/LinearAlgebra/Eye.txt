@@ -1,0 +1,56 @@
+FUNCTION_BLOCK Eye
+VAR_IN_OUT
+    eye:ARRAY[*,*] OF REAL;
+END_VAR
+
+VAR_INPUT
+    clear_before_set: BOOL := TRUE; // Optional parameter to clear matrix before setting
+END_VAR
+
+VAR_OUTPUT
+    Error:STRING;
+    is_valid: BOOL;
+END_VAR
+
+VAR
+    i:DINT;
+    j:DINT;
+    dim1, dim2: DINT;
+END_VAR
+
+// Initialize outputs
+Error := '';
+is_valid := FALSE;
+
+// Get dimensions
+dim1 := UPPER_BOUND(eye,1);
+dim2 := UPPER_BOUND(eye,2);
+
+// Validate dimensions
+IF dim1 <= 0 OR dim2 <= 0 THEN
+    Error := 'Invalid matrix dimensions';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+IF dim1 = dim2 THEN
+    // Clear matrix if requested
+    IF clear_before_set THEN
+        FOR i:=1 TO dim1 DO
+            FOR j:=1 TO dim1 DO
+                eye[i,j] := 0;
+            END_FOR;
+        END_FOR;
+    END_IF;
+    
+    // Set diagonal elements
+    FOR i:=1 TO dim1 DO
+        eye[i,i] := 1;
+    END_FOR;
+    
+    is_valid := TRUE;
+    Error := '';
+ELSE
+    Error := 'Non-square matrix';
+    is_valid := FALSE;
+END_IF

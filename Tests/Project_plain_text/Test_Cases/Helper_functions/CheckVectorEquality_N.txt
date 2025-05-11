@@ -1,0 +1,46 @@
+// Helper function
+FUNCTION CheckVectorEquality_N : BOOL
+VAR_IN_OUT
+    vec1 : ARRAY[*] OF REAL; // Changed from POINTER TO VectorN
+    vec2 : ARRAY[*] OF REAL; // Changed from POINTER TO VectorN
+END_VAR
+VAR_INPUT
+    N : INT;
+    tolerance : REAL;
+END_VAR
+VAR
+    k : DINT;
+    diff : REAL;
+END_VAR
+
+    // Initial assumption: vectors are equal
+    CheckVectorEquality_N := TRUE;
+
+    // Basic validation for N and tolerance
+    IF N <= 0 OR tolerance < 0.0 THEN
+        CheckVectorEquality_N := FALSE;
+        RETURN;
+    END_IF;
+
+    // Check if N is within the bounds of both arrays
+    // Note: Assumes 1-based indexing is desired for comparison length N,
+    // relative to the actual LOWER_BOUND of the arrays.
+    IF (LOWER_BOUND(vec1, 1) + N - 1 > UPPER_BOUND(vec1, 1)) OR (LOWER_BOUND(vec2, 1) + N - 1 > UPPER_BOUND(vec2, 1)) THEN
+         CheckVectorEquality_N := FALSE; // N exceeds the bounds of at least one array
+         RETURN;
+    END_IF;
+
+    // Loop through the first N elements starting from the lower bound of vec1
+    // Assumes both arrays should be compared starting from their respective lower bounds
+    // and have compatible indexing for the first N elements.
+    FOR k := 0 TO N - 1 DO // Iterate N times
+        // Access elements relative to their lower bounds
+        diff := vec1[LOWER_BOUND(vec1, 1) + k] - vec2[LOWER_BOUND(vec2, 1) + k];
+        IF ABS(diff) >= tolerance THEN
+            CheckVectorEquality_N := FALSE;
+            RETURN; // Exit early if inequality found
+        END_IF;
+    END_FOR
+
+// If loop completes, vectors are considered equal within tolerance for the first N elements
+END_FUNCTION

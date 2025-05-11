@@ -1,0 +1,17 @@
+FUNCTION CheckVectorEquality_6 : BOOL
+VAR_INPUT
+    vec1 : POINTER TO ARRAY[1..6] OF REAL;
+    vec2 : POINTER TO ARRAY[1..6] OF REAL;
+    tolerance : REAL;
+END_VAR
+VAR
+    i : DINT;
+END_VAR
+    CheckVectorEquality_6 := TRUE;
+    FOR i := 1 TO 6 DO
+        IF ABS(vec1^[i] - vec2^[i]) >= tolerance THEN
+            CheckVectorEquality_6 := FALSE;
+            RETURN;
+        END_IF
+    END_FOR
+END_FUNCTION 

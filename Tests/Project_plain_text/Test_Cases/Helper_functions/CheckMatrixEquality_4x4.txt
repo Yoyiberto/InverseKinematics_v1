@@ -1,0 +1,19 @@
+FUNCTION CheckMatrixEquality_4x4 : BOOL
+VAR_INPUT
+    mat1 : POINTER TO ARRAY[1..4, 1..4] OF REAL;
+    mat2 : POINTER TO ARRAY[1..4, 1..4] OF REAL;
+    tolerance : REAL;
+END_VAR
+VAR
+    row_idx, col_idx : DINT;
+END_VAR
+    CheckMatrixEquality_4x4 := TRUE;
+    FOR row_idx := 1 TO 4 DO
+        FOR col_idx := 1 TO 4 DO
+            IF ABS(mat1^[row_idx, col_idx] - mat2^[row_idx, col_idx]) >= tolerance THEN
+                CheckMatrixEquality_4x4 := FALSE;
+                RETURN;
+            END_IF
+        END_FOR
+    END_FOR
+END_FUNCTION 

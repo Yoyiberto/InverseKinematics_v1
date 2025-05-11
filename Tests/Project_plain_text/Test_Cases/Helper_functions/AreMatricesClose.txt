@@ -1,0 +1,30 @@
+// Helper for checking results
+    FUNCTION AreMatricesClose : BOOL
+    VAR_INPUT
+        matA : POINTER TO REAL;
+        matB : POINTER TO REAL;
+        rows : DINT;
+        cols : DINT;
+        tolerance : REAL;
+    END_VAR
+    VAR
+        row, col : DINT;
+        valA, valB : REAL;
+        idx : DINT;
+    END_VAR
+
+     
+        FOR row := 0 TO rows - 1 DO
+            FOR col := 0 TO cols - 1 DO
+                idx := row * cols + col;
+                valA := matA[idx];
+                valB := matB[idx];
+                IF ABS(valA - valB) > tolerance THEN
+                    AreMatricesClose := FALSE;
+                    RETURN;
+                END_IF;
+            END_FOR;
+        END_FOR;
+        AreMatricesClose := TRUE;
+
+

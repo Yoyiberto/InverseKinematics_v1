@@ -1,0 +1,37 @@
+FUNCTION_BLOCK Trace
+VAR_IN_OUT
+	Matrix:ARRAY[*,*] OF REAL;
+END_VAR
+VAR_OUTPUT
+	trace:REAL;
+	Error:STRING;
+	is_valid:BOOL := TRUE;
+END_VAR
+VAR
+	i:DINT;
+	j:DINT;
+	mat_rows:DINT;
+	mat_cols:DINT;
+END_VAR
+
+trace := 0;
+Error := '';
+is_valid := TRUE;
+
+mat_rows := UPPER_BOUND(Matrix, 1);
+mat_cols := UPPER_BOUND(Matrix, 2);
+
+IF mat_rows <= 0 OR mat_cols <= 0 THEN
+	Error := 'Invalid matrix dimensions';
+	is_valid := FALSE;
+	RETURN;
+END_IF
+
+IF mat_rows = mat_cols THEN
+	FOR i:=1 TO mat_rows DO
+		trace := trace + Matrix[i,i];
+	END_FOR
+ELSE
+	Error := 'Non-square matrix';
+	is_valid := FALSE;
+END_IF

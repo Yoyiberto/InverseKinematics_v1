@@ -1,0 +1,36 @@
+FUNCTION_BLOCK spatialVelToSE3Matrix
+VAR_INPUT
+	V:ARRAY [1..6] OF REAL;
+	
+END_VAR
+VAR_OUTPUT
+	se3mat:ARRAY [1..4,1..4] OF REAL;
+END_VAR
+VAR
+	angVelToSkewSymMatrix:angVelToSkewSymMatrix;
+	temp_V:ARRAY [1..3] OF REAL;
+	so3mat:ARRAY[1..3,1..3] OF REAL;//3x3matrix
+	i:DINT;
+	j:DINT;
+END_VAR
+
+temp_V[1]:=V[1];
+temp_V[2]:=V[2];
+temp_V[3]:=V[3];
+
+//angVelToSkewSymMatrix.angVelToSkewSymMatrix(omg:= temp_V, so3mat=> so3mat);
+angVelToSkewSymMatrix(omg:= temp_V, so3mat=> so3mat);
+FOR i:=1 TO 3 DO
+	FOR j:=1 TO 3 DO
+		se3mat[i,j]:=so3mat[i,j];
+	END_FOR
+END_FOR
+
+se3mat[1,4]:=V[4];
+se3mat[2,4]:=V[5];
+se3mat[3,4]:=V[6];
+
+se3mat[4,1]:=0;
+se3mat[4,2]:=0;
+se3mat[4,3]:=0;
+se3mat[4,4]:=0;

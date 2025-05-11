@@ -1,0 +1,240 @@
+FUNCTION_BLOCK InvTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    Inv_FB : Inv; // Instance of the Inv function block
+    MatMul_FB : MatMul; // For checking the inversion via A*A^-1 = I
+    
+    // Test matrices
+    mat_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    inverse_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    expected_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    
+    mat_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    inverse_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    
+    // Identity matrices
+    identity_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    identity_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    
+    // Result of A*A^-1 should be identity
+    result_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    result_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    
+    // For checking singularity
+    singular_matrix : ARRAY[1..3, 1..3] OF REAL;
+    singular_inverse : ARRAY[1..3, 1..3] OF REAL;
+    
+    i, j : DINT;
+    bTestPass : BOOL;
+    epsilon : REAL := 0.001; // Tolerance for floating point comparisons
+END_VAR
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup matrices for later tests
+            // 2x2 invertible matrix
+            mat_2x2[1,1] := 4; mat_2x2[1,2] := 7;
+            mat_2x2[2,1] := 2; mat_2x2[2,2] := 6;
+            
+            // Expected inverse for 2x2
+            expected_2x2[1,1] :=  0.6; expected_2x2[1,2] := -0.7;
+            expected_2x2[2,1] := -0.2; expected_2x2[2,2] :=  0.4;
+            
+            // 3x3 invertible matrix
+            mat_3x3[1,1] := 1; mat_3x3[1,2] := 2; mat_3x3[1,3] := 3;
+            mat_3x3[2,1] := 0; mat_3x3[2,2] := 1; mat_3x3[2,3] := 4;
+            mat_3x3[3,1] := 5; mat_3x3[3,2] := 6; mat_3x3[3,3] := 0;
+            
+            // Identity matrices
+            identity_2x2[1,1] := 1; identity_2x2[1,2] := 0;
+            identity_2x2[2,1] := 0; identity_2x2[2,2] := 1;
+            
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF i = j THEN
+                        identity_3x3[i,j] := 1;
+                    ELSE
+                        identity_3x3[i,j] := 0;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            // Singular matrix for testing
+            singular_matrix[1,1] := 1; singular_matrix[1,2] := 2; singular_matrix[1,3] := 3;
+            singular_matrix[2,1] := 2; singular_matrix[2,2] := 4; singular_matrix[2,3] := 6;
+            singular_matrix[3,1] := 0; singular_matrix[3,2] := 0; singular_matrix[3,3] := 0;
+            
+            nCurrentTest := nCurrentTest + 1;
+            
+        1: // Test 2x2 matrix inversion
+            // Copy for safety
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    inverse_2x2[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            Inv_FB(matSquare := mat_2x2, InverseMatrix := inverse_2x2);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    IF ABS(inverse_2x2[i,j] - expected_2x2[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Inv failed for 2x2 matrix - incorrect values';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        2: // Test A*A^-1 = I for 2x2
+            MatMul_FB(mat1 := mat_2x2, mat2 := inverse_2x2, MatResult := result_2x2);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    IF ABS(result_2x2[i,j] - identity_2x2[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass AND MatMul_FB.Error = '' THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Inv failed test A*A^-1 = I for 2x2 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        3: // Test 3x3 matrix inversion and A*A^-1 = I
+            // Initialize inverse matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    inverse_3x3[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            Inv_FB(matSquare := mat_3x3, InverseMatrix := inverse_3x3);
+            MatMul_FB(mat1 := mat_3x3, mat2 := inverse_3x3, MatResult := result_3x3);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(result_3x3[i,j] - identity_3x3[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass AND MatMul_FB.Error = '' THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Inv failed test A*A^-1 = I for 3x3 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        4: // Test A^-1*A = I for 3x3 (commutativity check)
+            MatMul_FB(mat1 := inverse_3x3, mat2 := mat_3x3, MatResult := result_3x3);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(result_3x3[i,j] - identity_3x3[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass AND MatMul_FB.Error = '' THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Inv failed test A^-1*A = I for 3x3 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        5: // Test identity matrix inversion (I^-1 = I)
+            // Reset inverse matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    inverse_3x3[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            Inv_FB(matSquare := identity_3x3, InverseMatrix := inverse_3x3);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(inverse_3x3[i,j] - identity_3x3[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Inv failed identity matrix test (I^-1 = I)';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        6: // Test singular matrix (should produce a special output or error)
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    singular_inverse[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            Inv_FB(matSquare := singular_matrix, InverseMatrix := singular_inverse);
+            
+            // Since we expect the inverse operation to produce large values for singular matrices
+            // or potentially fail, we check if the large constant is present
+            bTestPass := FALSE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(singular_inverse[i,j]) > 1.0E10 THEN
+                        bTestPass := TRUE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Inv did not properly handle singular matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF 

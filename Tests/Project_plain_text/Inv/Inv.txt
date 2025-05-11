@@ -1,0 +1,179 @@
+FUNCTION_BLOCK Inv
+VAR_IN_OUT
+	// User provides input matrix here (dynamic size)
+	matSquare:ARRAY[*,*] OF REAL;
+	// Result is written back here (same dynamic size as input)
+	InverseMatrix:ARRAY[*,*] OF REAL;
+END_VAR
+VAR
+	// FB instances
+	LuDecomposition: LuDecomposition;
+	// Use the Eye function block from LinearAlgebra
+	Eye_LA: Eye; // Renamed instance to avoid conflict with potential type name
+	LuInverse: LuInverse;
+
+	// Internal fixed-size arrays (hidden from user)
+	L:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	U:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	// p:ARRAY [1..GVL.MAX_INV_SIZE] OF DINT; // Array for permutation indices from LuDecomposition
+	P_mat:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Permutation Matrix P
+	d:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Dummy output from LuInverse
+	eyeN:ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Identity Matrix
+
+	// Internal fixed-size temporary copies for interfacing with sub-FBs
+	tempA : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	tempInvPA : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Holds (PA)^-1 from LuInverse
+	tempTrueInv : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Holds final A^-1
+
+	// Local variables
+	nSize : DINT;
+	i : DINT;
+	j : DINT;
+	k : DINT; // Loop index for matrix multiplication
+	bError : BOOL := FALSE; // Error flag
+	sEyeError : STRING; // To capture error message from Eye_LA
+	bEyeValid : BOOL;   // To capture validity status from Eye_LA
+	// bLuSingular : BOOL; // Flag to capture singularity from LuDecomposition (Optional but good practice)
+
+END_VAR
+
+// Implementation Body Starts Here
+
+// 1. Determine Size and Validate
+nSize := UPPER_BOUND(matSquare, 1); // Get dimension from input
+
+// Check if dimensions match
+IF nSize <> UPPER_BOUND(matSquare, 2) THEN
+	// Error: Input matrix must be square
+	bError := TRUE;
+	// Optionally: Set an error output or log message
+	RETURN;
+END_IF;
+
+// Check if dimensions match for output matrix
+IF nSize <> UPPER_BOUND(InverseMatrix, 1) OR nSize <> UPPER_BOUND(InverseMatrix, 2) THEN
+	// Error: Output matrix must have same dimensions as input
+	bError := TRUE;
+	// Optionally: Set an error output or log message
+	RETURN;
+END_IF;
+
+// Check if size exceeds internal limit
+IF nSize <= 0 OR nSize > GVL.MAX_INV_SIZE THEN
+	// Error: Invalid size or size exceeds MAX_INV_SIZE
+	bError := TRUE;
+	// Optionally: Set an error output or log message
+	RETURN;
+END_IF;
+
+// 2. Copy Input Matrix to Internal Fixed-Size Array
+FOR i := 1 TO nSize DO
+	FOR j := 1 TO nSize DO
+		tempA[i, j] := matSquare[i, j];
+	END_FOR;
+END_FOR;
+// Optionally zero out the rest of tempA if needed, but sub-FBs only use up to nSize
+
+// 3. Call Sub-Function Blocks
+// Call LuDecomposition
+// Assuming LuDecomposition FB instance has an output 'p' for permutation indices
+// and 'bSingular' for singularity status
+LuDecomposition(
+	nSize := nSize,
+	A:=tempA,
+	L=>L,
+	U=>U
+	// p=>p, // Capture permutation indices - uncomment if 'p' is the output name
+	// bSingular => bLuSingular // Capture singularity flag - uncomment if available
+);
+
+// Optional: Check for singularity immediately after LU Decomposition
+// IF bLuSingular THEN
+//	 bError := TRUE;
+//	 // Optionally set error message / code
+//	 RETURN;
+// END_IF;
+
+// Call LinearAlgebra.Eye
+// It works directly on the VAR_IN_OUT eyeN matrix
+// Initialize eyeN to zero first (as clear_before_set might modify only diagonal)
+FOR i := 1 TO nSize DO
+	FOR j := 1 TO nSize DO
+		eyeN[i, j] := 0.0;
+	END_FOR;
+END_FOR;
+
+Eye_LA(
+	eye := eyeN, // Pass the internal fixed-size array
+	// clear_before_set := TRUE, // Default is TRUE, can be omitted
+	Error => sEyeError,     // Capture error output
+	is_valid => bEyeValid   // Capture validity output
+);
+
+// Optional: Check if Eye_LA was successful
+IF NOT bEyeValid THEN
+	bError := TRUE;
+	// Optionally log sEyeError or handle the error
+	RETURN;
+END_IF;
+
+// Call LuInverse - Result is (PA)^-1 stored in tempInvPA
+LuInverse(
+	nSize := nSize,
+	L:= L,
+	u:= U,
+	eyeN:= eyeN,
+	a=>tempInvPA, // Result (PA)^-1 goes into tempInvPA
+	d=>d
+);
+
+// 4. Construct Permutation Matrix P from LuDecomposition.p
+// Initialize P_mat to zeros
+FOR i := 1 TO nSize DO
+	FOR j := 1 TO nSize DO
+		P_mat[i, j] := 0.0;
+	END_FOR;
+END_FOR;
+
+// Set elements based on LuDecomposition.p (permutation indices)
+// IMPORTANT: Assumes LuDecomposition.p is accessible and holds the 1-based indices
+// If the indices are stored differently (e.g., in 'p' variable captured above), adjust accordingly.
+FOR i := 1 TO nSize DO
+	// Check if the index from LU decomposition is valid
+	IF LuDecomposition.P_indices[i] >= 1 AND LuDecomposition.P_indices[i] <= nSize THEN
+		P_mat[i, LuDecomposition.P_indices[i]] := 1.0;
+	ELSE
+		// Error: Invalid permutation index received from LU decomposition
+		bError := TRUE;
+		// Optionally set error message
+		RETURN;
+	END_IF;
+END_FOR;
+
+
+// 5. Calculate True Inverse A^-1 = (PA)^-1 * P
+// Matrix multiplication: tempTrueInv = tempInvPA * P_mat
+FOR i := 1 TO nSize DO
+	FOR j := 1 TO nSize DO
+		tempTrueInv[i, j] := 0.0; // Initialize element
+		FOR k := 1 TO nSize DO
+			tempTrueInv[i, j] := tempTrueInv[i, j] + tempInvPA[i, k] * P_mat[k, j];
+		END_FOR;
+	END_FOR;
+END_FOR;
+
+
+// 6. Copy Result from Internal Array to Output IN_OUT Variable
+FOR i := 1 TO nSize DO
+	FOR j := 1 TO nSize DO
+		InverseMatrix[i, j] := tempTrueInv[i, j]; // Copy the true inverse
+	END_FOR;
+END_FOR;
+
+// Reset error flag if no errors occurred during this cycle
+// (Unless errors from sub-FBs should persist - depends on design)
+IF NOT bError THEN
+	// Reset any persistent error indicators if needed
+END_IF;
+
+// END_FUNCTION_BLOCK instruction would be here usually

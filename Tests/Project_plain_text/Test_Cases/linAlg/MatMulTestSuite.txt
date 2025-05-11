@@ -1,0 +1,185 @@
+FUNCTION_BLOCK MatMulTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    MatMul_FB : MatMul; // Instance of the MatMul function block
+    
+    // Test matrices
+    mat1_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    mat2_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    result_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    
+    mat1_2x3 : ARRAY[1..2, 1..3] OF REAL;
+    mat2_3x2 : ARRAY[1..3, 1..2] OF REAL;
+    result_2x2_from_2x3_3x2 : ARRAY[1..2, 1..2] OF REAL;
+    
+    mat1_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    mat2_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    result_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    
+    // Incompatible matrices
+    mat1_2x2_mismatch : ARRAY[1..2, 1..2] OF REAL;
+    mat2_3x3_mismatch : ARRAY[1..3, 1..3] OF REAL;
+    result_mismatch : ARRAY[1..2, 1..3] OF REAL;
+    
+    // Edge cases
+    mat1_identity : ARRAY[1..3, 1..3] OF REAL;
+    mat2_values : ARRAY[1..3, 1..3] OF REAL;
+    result_identity_mult : ARRAY[1..3, 1..3] OF REAL;
+    
+    i, j : DINT;
+    bTestPass : BOOL;
+END_VAR
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup matrices for later tests
+            // 2x2 matrices
+            mat1_2x2[1,1] := 1; mat1_2x2[1,2] := 2;
+            mat1_2x2[2,1] := 3; mat1_2x2[2,2] := 4;
+            
+            mat2_2x2[1,1] := 5; mat2_2x2[1,2] := 6;
+            mat2_2x2[2,1] := 7; mat2_2x2[2,2] := 8;
+            
+            // 2x3 and 3x2 matrices
+            mat1_2x3[1,1] := 1; mat1_2x3[1,2] := 2; mat1_2x3[1,3] := 3;
+            mat1_2x3[2,1] := 4; mat1_2x3[2,2] := 5; mat1_2x3[2,3] := 6;
+            
+            mat2_3x2[1,1] := 7; mat2_3x2[1,2] := 8;
+            mat2_3x2[2,1] := 9; mat2_3x2[2,2] := 10;
+            mat2_3x2[3,1] := 11; mat2_3x2[3,2] := 12;
+            
+            // 3x3 matrices
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    mat1_3x3[i,j] := i + j;
+                    mat2_3x3[i,j] := i * j;
+                END_FOR
+            END_FOR
+            
+            // Identity matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF i = j THEN
+                        mat1_identity[i,j] := 1;
+                    ELSE
+                        mat1_identity[i,j] := 0;
+                    END_IF
+                    mat2_values[i,j] := i * 10 + j;
+                END_FOR
+            END_FOR
+            
+            nCurrentTest := nCurrentTest + 1;
+            
+        1: // Test simple 2x2 matrix multiplication
+            // Expected result: [19, 22; 43, 50]
+            MatMul_FB(mat1 := mat1_2x2, mat2 := mat2_2x2, MatResult := result_2x2);
+            
+            bTestPass := (MatMul_FB.Error = '') AND
+                       (result_2x2[1,1] = 19) AND (result_2x2[1,2] = 22) AND
+                       (result_2x2[2,1] = 43) AND (result_2x2[2,2] = 50);
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'MatMul failed for 2x2 matrices';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        2: // Test 2x3 * 3x2 matrix multiplication
+            // Expected: [58, 64; 139, 154]
+            MatMul_FB(mat1 := mat1_2x3, mat2 := mat2_3x2, MatResult := result_2x2_from_2x3_3x2);
+            
+            bTestPass := (MatMul_FB.Error = '') AND
+                       (result_2x2_from_2x3_3x2[1,1] = 58) AND (result_2x2_from_2x3_3x2[1,2] = 64) AND
+                       (result_2x2_from_2x3_3x2[2,1] = 139) AND (result_2x2_from_2x3_3x2[2,2] = 154);
+                       
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'MatMul failed for 2x3 * 3x2 matrices';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        3: // Test dimension mismatch error handling
+            MatMul_FB(mat1 := mat1_2x2_mismatch, mat2 := mat2_3x3_mismatch, MatResult := result_mismatch);
+            
+            IF MatMul_FB.Error = 'Dimension mismatch' THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'MatMul did not properly handle dimension mismatch';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        4: // Test identity matrix multiplication (A * I = A)
+            MatMul_FB(mat1 := mat2_values, mat2 := mat1_identity, MatResult := result_identity_mult);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF result_identity_mult[i,j] <> mat2_values[i,j] THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass AND MatMul_FB.Error = '' THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'MatMul failed identity matrix test (A*I = A)';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        5: // Test zero matrix multiplication
+            // Reset result matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    result_3x3[i,j] := 99; // Set to a value that should be overwritten
+                    mat1_3x3[i,j] := 0;    // Set to all zeros
+                END_FOR
+            END_FOR
+            
+            MatMul_FB(mat1 := mat1_3x3, mat2 := mat2_3x3, MatResult := result_3x3);
+            
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF result_3x3[i,j] <> 0 THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass AND MatMul_FB.Error = '' THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'MatMul failed zero matrix multiplication test';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF 

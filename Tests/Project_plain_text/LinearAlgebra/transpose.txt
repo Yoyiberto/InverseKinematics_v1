@@ -1,0 +1,47 @@
+FUNCTION_BLOCK transpose
+VAR_IN_OUT
+    B:ARRAY[*,*] OF REAL;  // Input matrix
+    Bt:ARRAY[*,*] OF REAL; // Transposed matrix
+END_VAR
+VAR_OUTPUT
+    Error:STRING;
+    is_valid: BOOL := TRUE;
+END_VAR
+VAR
+    i:DINT;
+    j:DINT;
+    rows:DINT;
+    cols:DINT;
+    t_rows:DINT;
+    t_cols:DINT;
+END_VAR
+
+// Initialize outputs
+Error := '';
+is_valid := TRUE;
+
+// Get dimensions
+rows := UPPER_BOUND(B, 1);
+cols := UPPER_BOUND(B, 2);
+t_rows := UPPER_BOUND(Bt, 1);
+t_cols := UPPER_BOUND(Bt, 2);
+
+// Validate dimensions
+IF rows <= 0 OR cols <= 0 THEN
+    Error := 'Invalid input matrix dimensions';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+IF t_rows < cols OR t_cols < rows THEN
+    Error := 'Output matrix too small for transpose';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+// Perform transpose operation
+FOR i := 1 TO rows DO
+    FOR j := 1 TO cols DO
+        Bt[j,i] := B[i,j];
+    END_FOR
+END_FOR 

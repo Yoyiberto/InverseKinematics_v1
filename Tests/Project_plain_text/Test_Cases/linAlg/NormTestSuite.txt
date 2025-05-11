@@ -1,0 +1,109 @@
+FUNCTION_BLOCK NormTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    Norm_FB : norm; // Instance of the norm function block
+
+    // Test data
+    vec_in_3 : ARRAY[1..3] OF REAL;
+    vec_in_zero_4 : ARRAY[1..4] OF REAL;
+    vec_in_neg_2 : ARRAY[1..2] OF REAL;
+    vec_in_single : ARRAY[1..1] OF REAL;
+
+    fExpectedNorm : REAL;
+    i : DINT;
+    bTestPass : BOOL;
+    fEpsilon : REAL := 1E-6; // Tolerance for REAL comparisons
+END_VAR
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup vectors for later tests
+            vec_in_3[1] := 3.0; vec_in_3[2] := 0.0; vec_in_3[3] := 4.0; // Norm should be 5.0
+
+            vec_in_zero_4[1] := 0.0; vec_in_zero_4[2] := 0.0; vec_in_zero_4[3] := 0.0; vec_in_zero_4[4] := 0.0; // Norm should be 0.0
+
+            vec_in_neg_2[1] := -1.0; vec_in_neg_2[2] := -1.0; // Norm should be SQRT(2) approx 1.41421356
+            
+            vec_in_single[1] := -7.5; // Norm should be 7.5
+
+            nCurrentTest := nCurrentTest + 1;
+
+        1: // Test norm of a simple vector [3, 0, 4]
+            Norm_FB(vector := vec_in_3);
+            fExpectedNorm := 5.0;
+
+            bTestPass := ABS(Norm_FB.normValue - fExpectedNorm) < fEpsilon;
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Norm failed for simple vector [3, 0, 4]';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        2: // Test norm of a zero vector
+            Norm_FB(vector := vec_in_zero_4);
+            fExpectedNorm := 0.0;
+
+            bTestPass := ABS(Norm_FB.normValue - fExpectedNorm) < fEpsilon;
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Norm failed for zero vector';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        3: // Test norm of a vector with negative components [-1, -1]
+            Norm_FB(vector := vec_in_neg_2);
+            fExpectedNorm := SQRT(2.0); // Approx 1.41421356
+
+            bTestPass := ABS(Norm_FB.normValue - fExpectedNorm) < fEpsilon;
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Norm failed for vector with negative components [-1, -1]';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+         4: // Test norm of a single element vector [-7.5]
+            Norm_FB(vector := vec_in_single);
+            fExpectedNorm := 7.5;
+
+            bTestPass := ABS(Norm_FB.normValue - fExpectedNorm) < fEpsilon;
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Norm failed for single element vector [-7.5]';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF
+ENDFUNCTION_BLOCK 

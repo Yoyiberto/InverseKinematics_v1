@@ -1,0 +1,20 @@
+FUNCTION CheckJacobianEquality : BOOL
+VAR_INPUT
+    jb1 : POINTER TO ARRAY[1..6, 1..2] OF REAL; // Adjust second dim if needed
+    jb2 : POINTER TO ARRAY[1..6, 1..2] OF REAL; // Adjust second dim if needed
+    tolerance : REAL;
+END_VAR
+VAR
+    i, j : DINT;
+END_VAR
+
+
+    CheckJacobianEquality := TRUE;
+    FOR i := 1 TO 6 DO
+        FOR j := 1 TO 2 DO // Adjust upper bound if needed
+            IF ABS(jb1^[i, j] - jb2^[i, j]) >= tolerance THEN
+                CheckJacobianEquality := FALSE;
+                RETURN;
+            END_IF
+        END_FOR
+    END_FOR

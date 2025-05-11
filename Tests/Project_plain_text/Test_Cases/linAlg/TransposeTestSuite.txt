@@ -1,0 +1,253 @@
+FUNCTION_BLOCK TransposeTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    transpose_FB : transpose; // Instance of the transpose function block
+    
+    // Test matrices
+    mat_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    transpose_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    double_transpose_2x2 : ARRAY[1..2, 1..2] OF REAL;
+    
+    mat_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    transpose_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    
+    // Non-square matrices
+    mat_2x3 : ARRAY[1..2, 1..3] OF REAL;
+    transpose_3x2 : ARRAY[1..3, 1..2] OF REAL;
+    
+    mat_3x2 : ARRAY[1..3, 1..2] OF REAL;
+    transpose_2x3 : ARRAY[1..2, 1..3] OF REAL;
+    
+    // Symmetric matrix
+    symmetric_3x3 : ARRAY[1..3, 1..3] OF REAL;
+    transpose_symmetric : ARRAY[1..3, 1..3] OF REAL;
+    
+    i, j : DINT;
+    bTestPass : BOOL;
+    epsilon : REAL := 0.000001; // Tolerance for floating point comparisons
+END_VAR
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup test matrices
+            // 2x2 matrix
+            mat_2x2[1,1] := 1; mat_2x2[1,2] := 2;
+            mat_2x2[2,1] := 3; mat_2x2[2,2] := 4;
+            
+            // 3x3 matrix
+            mat_3x3[1,1] := 1; mat_3x3[1,2] := 2; mat_3x3[1,3] := 3;
+            mat_3x3[2,1] := 4; mat_3x3[2,2] := 5; mat_3x3[2,3] := 6;
+            mat_3x3[3,1] := 7; mat_3x3[3,2] := 8; mat_3x3[3,3] := 9;
+            
+            // 2x3 matrix
+            mat_2x3[1,1] := 1; mat_2x3[1,2] := 2; mat_2x3[1,3] := 3;
+            mat_2x3[2,1] := 4; mat_2x3[2,2] := 5; mat_2x3[2,3] := 6;
+            
+            // 3x2 matrix
+            mat_3x2[1,1] := 7; mat_3x2[1,2] := 8;
+            mat_3x2[2,1] := 9; mat_3x2[2,2] := 10;
+            mat_3x2[3,1] := 11; mat_3x2[3,2] := 12;
+            
+            // Symmetric matrix
+            symmetric_3x3[1,1] := 1; symmetric_3x3[1,2] := 2; symmetric_3x3[1,3] := 3;
+            symmetric_3x3[2,1] := 2; symmetric_3x3[2,2] := 5; symmetric_3x3[2,3] := 6;
+            symmetric_3x3[3,1] := 3; symmetric_3x3[3,2] := 6; symmetric_3x3[3,3] := 9;
+            
+            nCurrentTest := nCurrentTest + 1;
+            
+        1: // Test 2x2 matrix transpose
+            // Initialize transpose matrix
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    transpose_2x2[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            // Compute transpose
+            transpose_FB(B := mat_2x2, Bt := transpose_2x2);
+            
+            // Check transpose correctness
+            bTestPass := TRUE;
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    IF ABS(transpose_2x2[i,j] - mat_2x2[j,i]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Transpose failed for 2x2 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        2: // Test 3x3 matrix transpose
+            // Initialize transpose matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    transpose_3x3[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            // Compute transpose
+            transpose_FB(B := mat_3x3, Bt := transpose_3x3);
+            
+            // Check transpose correctness
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(transpose_3x3[i,j] - mat_3x3[j,i]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Transpose failed for 3x3 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        3: // Test 2x3 matrix transpose
+            // Initialize transpose matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 2 DO
+                    transpose_3x2[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            // Compute transpose
+            transpose_FB(B := mat_2x3, Bt := transpose_3x2);
+            
+            // Check transpose correctness
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 2 DO
+                    IF ABS(transpose_3x2[i,j] - mat_2x3[j,i]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Transpose failed for 2x3 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        4: // Test 3x2 matrix transpose
+            // Initialize transpose matrix
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 3 DO
+                    transpose_2x3[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            // Compute transpose
+            transpose_FB(B := mat_3x2, Bt := transpose_2x3);
+            
+            // Check transpose correctness
+            bTestPass := TRUE;
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(transpose_2x3[i,j] - mat_3x2[j,i]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Transpose failed for 3x2 matrix';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        5: // Test double transpose is original: (A^T)^T = A
+            // Initialize double transpose matrix
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    double_transpose_2x2[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            // Compute double transpose
+            transpose_FB(B := transpose_2x2, Bt := double_transpose_2x2);
+            
+            // Check double transpose correctness
+            bTestPass := TRUE;
+            FOR i := 1 TO 2 DO
+                FOR j := 1 TO 2 DO
+                    IF ABS(double_transpose_2x2[i,j] - mat_2x2[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Double transpose failed (A^T)^T = A property';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        6: // Test symmetric matrix transpose: A = A^T for symmetric matrix
+            // Initialize transpose matrix
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    transpose_symmetric[i,j] := 0;
+                END_FOR
+            END_FOR
+            
+            // Compute transpose
+            transpose_FB(B := symmetric_3x3, Bt := transpose_symmetric);
+            
+            // Check transpose equals original (property of symmetric matrix)
+            bTestPass := TRUE;
+            FOR i := 1 TO 3 DO
+                FOR j := 1 TO 3 DO
+                    IF ABS(transpose_symmetric[i,j] - symmetric_3x3[i,j]) > epsilon THEN
+                        bTestPass := FALSE;
+                    END_IF
+                END_FOR
+            END_FOR
+            
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'Transpose of symmetric matrix failed A = A^T property';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+            
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF 

@@ -1,0 +1,3 @@
+VAR_GLOBAL CONSTANT
+    MAX_JOINTS : DINT := 3; // Max number of joints for RRR comparison
+END_VAR 

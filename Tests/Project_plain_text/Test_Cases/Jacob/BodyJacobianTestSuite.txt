@@ -1,0 +1,139 @@
+// IMPORTANT: Assumes GVL.nJoints=2 is defined appropriately if Jb size relies on it.
+FUNCTION_BLOCK BodyJacobianTestSuite
+VAR_INPUT
+    bExecute : BOOL; // Trigger to run tests
+END_VAR
+VAR_OUTPUT
+    bDone : BOOL;    // All tests complete
+    nPassCount : INT; // Number of passed tests
+    nFailCount : INT; // Number of failed tests
+    sLastError : STRING; // Last error message
+END_VAR
+VAR
+    nCurrentTest : INT := 0;
+    FB_UnderTest : BodyJacobian; // Instance of the function block
+
+    // Test data - Planar 2R Robot (L1=1, L2=1)
+    Blist_2R : ARRAY[1..6, 1..2] OF REAL; // 6xN, N=2 joints
+    Jb_out : ARRAY[1..6, 1..2] OF REAL; // Output Jacobian
+
+    thetalist_zero : ARRAY[1..2] OF REAL;
+    Jb_expected_zero : ARRAY[1..6, 1..2] OF REAL; // Expected Jb at thetalist = [0, 0]
+
+    thetalist_0_90 : ARRAY[1..2] OF REAL;
+    Jb_expected_0_90 : ARRAY[1..6, 1..2] OF REAL; // Expected Jb at thetalist = [0, PI/2]
+
+    thetalist_90_neg90 : ARRAY[1..2] OF REAL;
+    Jb_expected_90_neg90 : ARRAY[1..6, 1..2] OF REAL; // Expected Jb at thetalist = [PI/2, -PI/2]
+
+    i, j : DINT;
+    bTestPass : BOOL;
+    fEpsilon : REAL := 1E-5; // Tolerance for REAL comparisons
+    PI : REAL := 3.1415926535;
+END_VAR
+
+// Main execution code
+IF bExecute AND NOT bDone THEN
+    CASE nCurrentTest OF
+        0: // Setup test data for Planar 2R Robot
+            // Blist: Screw axes in body frame at home config
+            Blist_2R[1, 1] := 0.0; Blist_2R[2, 1] := 0.0; Blist_2R[3, 1] := 1.0; Blist_2R[4, 1] := 0.0; Blist_2R[5, 1] := -2.0; Blist_2R[6, 1] := 0.0; // Joint 1 (wz=1, vy=-L1-L2 = -2)
+            Blist_2R[1, 2] := 0.0; Blist_2R[2, 2] := 0.0; Blist_2R[3, 2] := 1.0; Blist_2R[4, 2] := 0.0; Blist_2R[5, 2] := -1.0; Blist_2R[6, 2] := 0.0; // Joint 2 (wz=1, vy=-L2 = -1)
+
+            // Test Angles and Expected Jacobians
+            // Case 1: theta = [0, 0] => Jb = Blist
+            thetalist_zero[1] := 0.0; thetalist_zero[2] := 0.0;
+            Jb_expected_zero := Blist_2R;
+
+            // Case 2: theta = [0, PI/2]
+            thetalist_0_90[1] := 0.0; thetalist_0_90[2] := PI / 2.0;
+            // Jb[:, 2] = Blist[:, 2]
+            // Jb[:, 1] = Ad(exp(-B2*theta2)) * B1
+            // T = exp(-B2*theta2) = exp(-[0,0,1,0,-1,0]*PI/2) = exp([0,0,-PI/2,0,PI/2,0])
+            // R = Rot(Z, -PI/2) = [0 1 0; -1 0 0; 0 0 1]
+            // p = [1, 1, 0] (Calculated in thought process)
+            // T = [0 1 0 1; -1 0 0 1; 0 0 1 0; 0 0 0 1]
+            // AdT = [R, 0; p_skew*R, R]
+            // p_skew = [0 0 1; 0 0 -1; -1 1 0]
+            // p_skew*R = [0 0 1; 0 0 -1; -1 -1 0] * [0 1 0; -1 0 0; 0 0 1] = [0 0 1; 0 0 -1; -1 -1 0]
+            // AdT = [0 1 0 0 0 0; -1 0 0 0 0 0; 0 0 1 0 0 0; 0 0 1 0 1 0; 0 0 -1 -1 0 0; -1 -1 0 0 0 1]
+            // Jb[:, 1] = AdT * [0, 0, 1, 0, -2, 0]^T = [0, 0, 1, 1, -1, 0]^T (Mistake in thought process calc, re-did here)
+            Jb_expected_0_90[1, 1] := 0.0; Jb_expected_0_90[2, 1] := 0.0; Jb_expected_0_90[3, 1] := 1.0; 
+            Jb_expected_0_90[4, 1] := -1.0; Jb_expected_0_90[5, 1] := -1.0; Jb_expected_0_90[6, 1] := 0.0;
+            // Copy column 2 element by element
+            FOR i := 1 TO 6 DO
+                Jb_expected_0_90[i, 2] := Blist_2R[i, 2];
+            END_FOR
+
+            // Case 3: theta = [PI/2, -PI/2]
+            thetalist_90_neg90[1] := PI / 2.0; thetalist_90_neg90[2] := -PI / 2.0;
+            // Jb[:, 2] = Blist[:, 2]
+            // Jb[:, 1] = Ad(exp(-B2*theta2)) * B1
+            // T = exp(-B2*theta2) = exp(-[0,0,1,0,-1,0]*(-PI/2)) = exp([0,0,PI/2,0,-PI/2,0])
+            // R = Rot(Z, PI/2) = [0 -1 0; 1 0 0; 0 0 1]
+            // p = [1, -1, 0] (Calculated in thought process)
+            // T = [0 -1 0 1; 1 0 0 -1; 0 0 1 0; 0 0 0 1]
+            // AdT = [R, 0; p_skew*R, R]
+            // p_skew = [0 0 -1; 0 0 -1; -1 -1 0]
+            // p_skew*R = [0 0 -1; 0 0 -1; -1 1 0] * [0 -1 0; 1 0 0; 0 0 1] = [0 0 -1; 0 0 -1; -1 1 0]
+            // AdT = [0 -1 0 0 0 0; 1 0 0 0 0 0; 0 0 1 0 0 0; 0 0 -1 0 -1 0; 0 0 -1 1 0 0; -1 1 0 0 0 1]
+            // Jb[:, 1] = AdT * [0, 0, 1, 0, -2, 0]^T = [0, 0, 1, 1, -1, 0] (Rerun calc from thought)
+            Jb_expected_90_neg90[1, 1] := 0.0; Jb_expected_90_neg90[2, 1] := 0.0; Jb_expected_90_neg90[3, 1] := 1.0;
+            Jb_expected_90_neg90[4, 1] := 1.0; Jb_expected_90_neg90[5, 1] := -1.0; Jb_expected_90_neg90[6, 1] := 0.0;
+            // Copy column 2 element by element
+            FOR i := 1 TO 6 DO
+                Jb_expected_90_neg90[i, 2] := Blist_2R[i, 2];
+            END_FOR
+
+
+            nCurrentTest := nCurrentTest + 1;
+
+        1: // Test with Zero Angles
+            FB_UnderTest(Blist := Blist_2R, thetalist := thetalist_zero, Jb:= Jb_out);
+            bTestPass := CheckJacobianEquality(jb1 := ADR(Jb_out), jb2 := ADR(Jb_expected_zero), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'BodyJacobian failed for Zero Angles';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        2: // Test with theta = [0, PI/2]
+            FB_UnderTest(Blist := Blist_2R, thetalist := thetalist_0_90, Jb := Jb_out);
+            bTestPass := CheckJacobianEquality(jb1 := ADR(Jb_out), jb2 := ADR(Jb_expected_0_90), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'BodyJacobian failed for theta=[0, PI/2]';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        3: // Test with theta = [PI/2, -PI/2]
+            FB_UnderTest(Blist := Blist_2R, thetalist := thetalist_90_neg90, Jb := Jb_out);
+            bTestPass := CheckJacobianEquality(jb1 := ADR(Jb_out), jb2 := ADR(Jb_expected_90_neg90), tolerance := fEpsilon);
+
+            IF bTestPass THEN
+                nPassCount := nPassCount + 1;
+            ELSE
+                nFailCount := nFailCount + 1;
+                sLastError := 'BodyJacobian failed for theta=[PI/2, -PI/2]';
+            END_IF
+            nCurrentTest := nCurrentTest + 1;
+
+        ELSE
+            bDone := TRUE;
+    END_CASE
+END_IF
+
+IF NOT bExecute THEN
+    nCurrentTest := 0;
+    nPassCount := 0;
+    nFailCount := 0;
+    sLastError := '';
+    bDone := FALSE;
+END_IF
+ 

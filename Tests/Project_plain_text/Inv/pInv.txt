@@ -1,0 +1,156 @@
+FUNCTION_BLOCK pInv
+VAR_IN_OUT
+	matrix:ARRAY[*,*] OF REAL; (* Input matrix (dim1 x dim2) *)
+	pInvMatrix:ARRAY[*,*] OF REAL; (* Output pseudoinverse (dim2 x dim1) *)
+END_VAR
+VAR
+	// FB instances
+	transpose_fb: transpose_fixed; 
+	matmul_fb1: Matmul_fixed;     
+	inv_fb: inv_fixed;          
+	matmul_fb2: Matmul_fixed;     
+
+	// Internal fixed-size arrays for intermediate calculations
+	// We use MAX_INV_SIZE as a safe upper bound for these temporaries.
+	// The actual dimensions used will be determined by dim1 and dim2.
+	tempMatrixIn : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL;
+	tempMatrixTrans : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Will hold dim2 x dim1 (A')
+	tempMatSquare : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Holds A'A or AA'
+	tempInverseResult : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Holds (A'A)^-1 or (AA')^-1
+	tempPInvFinal : ARRAY [1..GVL.MAX_INV_SIZE, 1..GVL.MAX_INV_SIZE] OF REAL; // Will hold dim2 x dim1 (final result before copy)
+
+	// Local variables
+	dim1 : DINT; // Number of rows in input matrix
+	dim2 : DINT; // Number of columns in input matrix
+	i : DINT;
+	j : DINT;
+	bError : BOOL := FALSE; // Error flag
+END_VAR
+
+// 1. Determine Size and Validate Input Dimensions
+dim1 := UPPER_BOUND(matrix, 1);
+dim2 := UPPER_BOUND(matrix, 2);
+
+// Validate input size against max supported size
+IF dim1 <= 0 OR dim2 <= 0 OR dim1 > GVL.MAX_INV_SIZE OR dim2 > GVL.MAX_INV_SIZE THEN
+	bError := TRUE; // Invalid dimensions or input exceeds max size
+	RETURN;
+END_IF;
+
+// Validate size of the matrix to be inverted (A'A or AA')
+IF dim1 >= dim2 THEN // Tall or square matrix: inverting A'A (dim2 x dim2)
+    IF dim2 > GVL.MAX_INV_SIZE THEN
+        bError := TRUE; // Intermediate square matrix A'A exceeds max size
+        RETURN;
+    END_IF;
+ELSE // Wide matrix: inverting AA' (dim1 x dim1)
+    IF dim1 > GVL.MAX_INV_SIZE THEN
+        bError := TRUE; // Intermediate square matrix AA' exceeds max size
+        RETURN;
+    END_IF;
+END_IF;
+
+// Validate output dimensions match expected pseudo-inverse size (dim2 x dim1)
+IF UPPER_BOUND(pInvMatrix, 1) <> dim2 OR UPPER_BOUND(pInvMatrix, 2) <> dim1 THEN
+	bError := TRUE; // Output dimensions mismatch
+	RETURN;
+END_IF;
+
+// Reset error flag for this execution cycle if all initial checks passed
+bError := FALSE;
+
+// 2. Copy Input VAR_IN_OUT Matrix to Internal Fixed-Size Array
+FOR i := 1 TO dim1 DO
+	FOR j := 1 TO dim2 DO
+		tempMatrixIn[i, j] := matrix[i, j];
+	END_FOR;
+END_FOR;
+
+// 3. Calculate Transpose: tempMatrixTrans(dim2 x dim1) = matrix'(dim1 x dim2)
+transpose_fb(
+	B:=tempMatrixIn, 
+	Bt:=tempMatrixTrans,
+	rowsB:=dim1,
+	colsB:=dim2
+);
+// TODO: Check transpose_fb.bError or similar error flag and set pInv.bError, then RETURN if error.
+// IF transpose_fb.bError THEN bError := TRUE; RETURN; END_IF;
+
+IF dim1 >= dim2 THEN // CASE 1: Tall or square matrix (dim1 >= dim2). Formula: (A'A)^-1 * A'
+    // 4a. Calculate Square Matrix: tempMatSquare(dim2 x dim2) = tempMatrixTrans(A') * tempMatrixIn(A)
+    matmul_fb1(
+    	mat1:= tempMatrixTrans, 
+    	mat2:= tempMatrixIn, 
+    	MatResult:= tempMatSquare,
+    	r1:=dim2, // A' is dim2 x dim1
+    	c1r2:=dim1, // A is dim1 x dim2
+    	c2:=dim2 // Result A'A is dim2 x dim2
+    );
+    // TODO: Check matmul_fb1.bError and set pInv.bError, then RETURN if error.
+    // IF matmul_fb1.bError THEN bError := TRUE; RETURN; END_IF;
+
+    // 5a. Calculate Inverse of Square Matrix: tempInverseResult(dim2 x dim2) = inv(tempMatSquare)
+    inv_fb(
+    	matSquare := tempMatSquare, 
+    	InverseMatrix := tempInverseResult,
+    	n:=dim2 // Size of A'A
+    );
+    // TODO: Check inv_fb.bError and set pInv.bError, then RETURN if error.
+    // IF inv_fb.bError THEN bError := TRUE; RETURN; END_IF;
+
+    // 6a. Calculate Pseudo-Inverse: tempPInvFinal(dim2 x dim1) = tempInverseResult((A'A)^-1) * tempMatrixTrans(A')
+    matmul_fb2(
+    	mat1:= tempInverseResult, 
+    	mat2:= tempMatrixTrans, 
+    	MatResult:= tempPInvFinal,
+    	r1:=dim2, // (A'A)^-1 is dim2 x dim2
+    	c1r2:=dim2, // A' is dim2 x dim1
+    	c2:=dim1 // Result is dim2 x dim1
+    );
+    // TODO: Check matmul_fb2.bError and set pInv.bError, then RETURN if error.
+    // IF matmul_fb2.bError THEN bError := TRUE; RETURN; END_IF;
+
+ELSE // CASE 2: Wide matrix (dim1 < dim2). Formula: A' * (AA')^-1
+    // 4b. Calculate Square Matrix: tempMatSquare(dim1 x dim1) = tempMatrixIn(A) * tempMatrixTrans(A')
+    matmul_fb1(
+        mat1:= tempMatrixIn, 
+        mat2:= tempMatrixTrans, 
+        MatResult:= tempMatSquare,
+        r1:=dim1, // A is dim1 x dim2
+        c1r2:=dim2, // A' is dim2 x dim1
+        c2:=dim1 // Result AA' is dim1 x dim1
+    );
+    // TODO: Check matmul_fb1.bError and set pInv.bError, then RETURN if error.
+    // IF matmul_fb1.bError THEN bError := TRUE; RETURN; END_IF;
+
+    // 5b. Calculate Inverse of Square Matrix: tempInverseResult(dim1 x dim1) = inv(tempMatSquare)
+    inv_fb(
+        matSquare := tempMatSquare, 
+        InverseMatrix := tempInverseResult,
+        n:=dim1 // Size of AA'
+    );
+    // TODO: Check inv_fb.bError and set pInv.bError, then RETURN if error.
+    // IF inv_fb.bError THEN bError := TRUE; RETURN; END_IF;
+
+    // 6b. Calculate Pseudo-Inverse: tempPInvFinal(dim2 x dim1) = tempMatrixTrans(A') * tempInverseResult((AA')^-1)
+    matmul_fb2(
+        mat1:= tempMatrixTrans, 
+        mat2:= tempInverseResult, 
+        MatResult:= tempPInvFinal,
+        r1:=dim2, // A' is dim2 x dim1
+        c1r2:=dim1, // (AA')^-1 is dim1 x dim1
+        c2:=dim1 // Result is dim2 x dim1
+    );
+    // TODO: Check matmul_fb2.bError and set pInv.bError, then RETURN if error.
+    // IF matmul_fb2.bError THEN bError := TRUE; RETURN; END_IF;
+END_IF;
+
+// 7. Copy Result from Internal Fixed-Size Array to Output VAR_IN_OUT Variable
+// This part is reached only if no errors occurred or bError was not set by sub-FBs
+IF NOT bError THEN
+    FOR i := 1 TO dim2 DO
+        FOR j := 1 TO dim1 DO
+            pInvMatrix[i, j] := tempPInvFinal[i, j];
+        END_FOR;
+    END_FOR;
+END_IF;

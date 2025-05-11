@@ -1,0 +1,449 @@
+FUNCTION_BLOCK TestFramework
+VAR_INPUT
+    bRunTests : BOOL; // Trigger to run all test suites
+END_VAR
+VAR_OUTPUT
+    bAllDone : BOOL; // All test suites completed
+    nTotalPassed : INT; // Total passed tests
+    nTotalFailed : INT; // Total failed tests
+    sLastError : STRING; // Changed from WSTRING to STRING
+END_VAR
+VAR
+    sCurrentSuite : STRING; // Changed from WSTRING to STRING
+    nCurrentSuite : INT := 0;
+    
+    // LinAlg tests
+    EyeTests : EyeTestSuite;
+    MatMulTests : MatMulTestSuite;
+    TraceTests : TraceTestSuite;
+    VectScalTests : VectByScalarTestSuite;
+    NormTests : NormTestSuite;
+    MatScalTests : MatByScalarTestSuite;
+    TransposeTests : TransposeTestSuite;
+    
+    // Inv tests
+    LuInvTests : LuInverseTestSuite;
+    LuDecompTests : LuDecompositionTestSuite;
+    PInvTests : PInvTestSuite;
+    InvTests : InvTestSuite;
+    
+    // Jacob tests
+    InvKinBodyTests : getInvKinematics_BodyTestSuite;
+    TransFromExpTests : TransSE3_fromExp_se3TestSuite;
+    FwdKinBodyTests : getFwdKinematics_BodyTestSuite;
+    FastInvTransTests : fastInverseTransformTestSuite;
+    AdjTransTests : AdjointTransformTestSuite;
+    BodyJacTests : BodyJacobianTestSuite;
+    ExpFromTransTests : Exp_se3_fromTransTestSuite;
+    ExpFromRotTests : Exp_so3_fromRotTestSuite;
+    RotFromExpTests : RotSO3_fromExpso3TestSuite;
+    so3ToAngVelTests : so3ToAngularVelocityTestSuite;
+    SE3FromSpatVelTests : spatialVelToSE3MatrixTestSuite;
+    TransToRotPosTests : TransSE3_ToRotAndPosTestSuite;
+    se3ToSpatVelTests : se3ToSpatialVelTestSuite;
+    ExpToRotAxisAngleTests : expToRotAxisAndAngleTestSuite;
+END_VAR
+
+// Main execution code
+IF bRunTests AND NOT bAllDone THEN
+    CASE nCurrentSuite OF
+        0: // Initialize
+            nTotalPassed := 0;
+            nTotalFailed := 0;
+            sLastError := '';
+            sCurrentSuite := '';
+            nCurrentSuite := nCurrentSuite + 1;
+            
+        // --- LinAlg Tests ---    
+        1: // Run Eye tests
+            sCurrentSuite := 'Eye Tests'; 
+            EyeTests(bExecute := TRUE);
+            
+            IF EyeTests.bDone THEN
+                nTotalPassed := nTotalPassed + EyeTests.nPassCount;
+                nTotalFailed := nTotalFailed + EyeTests.nFailCount;
+                
+                IF EyeTests.nFailCount > 0 AND sLastError = '' THEN 
+                    sLastError := CONCAT('Eye: ', EyeTests.sLastError); 
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        2: // Run MatMul tests
+            sCurrentSuite := 'MatMul Tests'; 
+            MatMulTests(bExecute := TRUE);
+            
+            IF MatMulTests.bDone THEN
+                nTotalPassed := nTotalPassed + MatMulTests.nPassCount;
+                nTotalFailed := nTotalFailed + MatMulTests.nFailCount;
+                
+                IF MatMulTests.nFailCount > 0 AND sLastError = '' THEN 
+                    sLastError := CONCAT('MatMul: ', MatMulTests.sLastError); 
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        3: // Run Trace tests
+            sCurrentSuite := 'Trace Tests'; 
+            TraceTests(bExecute := TRUE);
+            
+            IF TraceTests.bDone THEN
+                nTotalPassed := nTotalPassed + TraceTests.nPassCount;
+                nTotalFailed := nTotalFailed + TraceTests.nFailCount;
+                
+                IF TraceTests.nFailCount > 0 AND sLastError = '' THEN 
+                    sLastError := CONCAT('Trace: ', TraceTests.sLastError); 
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        4: // Run VectScal tests
+            sCurrentSuite := 'VectScal Tests';
+            VectScalTests(bExecute := TRUE);
+            
+            IF VectScalTests.bDone THEN
+                nTotalPassed := nTotalPassed + VectScalTests.nPassCount;
+                nTotalFailed := nTotalFailed + VectScalTests.nFailCount;
+                
+                IF VectScalTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('VectScal: ', VectScalTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        5: // Run Norm tests
+            sCurrentSuite := 'Norm Tests';
+            NormTests(bExecute := TRUE);
+            
+            IF NormTests.bDone THEN
+                nTotalPassed := nTotalPassed + NormTests.nPassCount;
+                nTotalFailed := nTotalFailed + NormTests.nFailCount;
+                
+                IF NormTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('Norm: ', NormTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        6: // Run MatScal tests
+            sCurrentSuite := 'MatScal Tests';
+            MatScalTests(bExecute := TRUE);
+            
+            IF MatScalTests.bDone THEN
+                nTotalPassed := nTotalPassed + MatScalTests.nPassCount;
+                nTotalFailed := nTotalFailed + MatScalTests.nFailCount;
+                
+                IF MatScalTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('MatScal: ', MatScalTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        7: // Run Transpose tests
+            sCurrentSuite := 'Transpose Tests';
+            TransposeTests(bExecute := TRUE);
+            
+            IF TransposeTests.bDone THEN
+                nTotalPassed := nTotalPassed + TransposeTests.nPassCount;
+                nTotalFailed := nTotalFailed + TransposeTests.nFailCount;
+                
+                IF TransposeTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('Transpose: ', TransposeTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        // --- Inv Tests ---    
+        8: // Run LuInv tests
+            sCurrentSuite := 'LuInv Tests';
+            LuInvTests(bExecute := TRUE);
+            
+            IF LuInvTests.bDone THEN
+                nTotalPassed := nTotalPassed + LuInvTests.nPassCount;
+                nTotalFailed := nTotalFailed + LuInvTests.nFailCount;
+                
+                IF LuInvTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('LuInv: ', LuInvTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        9: // Run LuDecomp tests
+            sCurrentSuite := 'LuDecomp Tests';
+            LuDecompTests(bExecute := TRUE);
+            
+            IF LuDecompTests.bDone THEN
+                nTotalPassed := nTotalPassed + LuDecompTests.nPassCount;
+                nTotalFailed := nTotalFailed + LuDecompTests.nFailCount;
+                
+                IF LuDecompTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('LuDecomp: ', LuDecompTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        10: // Run PInv tests
+            sCurrentSuite := 'PInv Tests';
+            PInvTests(bExecute := TRUE);
+            
+            IF PInvTests.bDone THEN
+                nTotalPassed := nTotalPassed + PInvTests.nPassCount;
+                nTotalFailed := nTotalFailed + PInvTests.nFailCount;
+                
+                IF PInvTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('PInv: ', PInvTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        11: // Run Inv tests
+            sCurrentSuite := 'Inv Tests';
+            InvTests(bExecute := TRUE);
+            
+            IF InvTests.bDone THEN
+                nTotalPassed := nTotalPassed + InvTests.nPassCount;
+                nTotalFailed := nTotalFailed + InvTests.nFailCount;
+                
+                IF InvTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('Inv: ', InvTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        // --- Jacob Tests ---    
+        12: // Run InvKinBody tests
+            sCurrentSuite := 'InvKinBody Tests';
+            InvKinBodyTests(bExecute := TRUE);
+            
+            IF InvKinBodyTests.bDone THEN
+                nTotalPassed := nTotalPassed + InvKinBodyTests.nPassCount;
+                nTotalFailed := nTotalFailed + InvKinBodyTests.nFailCount;
+                
+                IF InvKinBodyTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('InvKinBody: ', InvKinBodyTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        13: // Run TransFromExp tests
+            sCurrentSuite := 'TransFromExp Tests';
+            TransFromExpTests(bExecute := TRUE);
+            
+            IF TransFromExpTests.bDone THEN
+                nTotalPassed := nTotalPassed + TransFromExpTests.nPassCount;
+                nTotalFailed := nTotalFailed + TransFromExpTests.nFailCount;
+                
+                IF TransFromExpTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('TransFromExp: ', TransFromExpTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        14: // Run FwdKinBody tests
+            sCurrentSuite := 'FwdKinBody Tests';
+            FwdKinBodyTests(bExecute := TRUE);
+            
+            IF FwdKinBodyTests.bDone THEN
+                nTotalPassed := nTotalPassed + FwdKinBodyTests.nPassCount;
+                nTotalFailed := nTotalFailed + FwdKinBodyTests.nFailCount;
+                
+                IF FwdKinBodyTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('FwdKinBody: ', FwdKinBodyTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        15: // Run FastInvTrans tests
+            sCurrentSuite := 'FastInvTrans Tests';
+            FastInvTransTests(bExecute := TRUE);
+            
+            IF FastInvTransTests.bDone THEN
+                nTotalPassed := nTotalPassed + FastInvTransTests.nPassCount;
+                nTotalFailed := nTotalFailed + FastInvTransTests.nFailCount;
+                
+                IF FastInvTransTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('FastInvTrans: ', FastInvTransTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        16: // Run AdjTrans tests
+            sCurrentSuite := 'AdjTrans Tests';
+            AdjTransTests(bExecute := TRUE);
+            
+            IF AdjTransTests.bDone THEN
+                nTotalPassed := nTotalPassed + AdjTransTests.nPassCount;
+                nTotalFailed := nTotalFailed + AdjTransTests.nFailCount;
+                
+                IF AdjTransTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('AdjTrans: ', AdjTransTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        17: // Run BodyJac tests
+            sCurrentSuite := 'BodyJac Tests';
+            BodyJacTests(bExecute := TRUE);
+            
+            IF BodyJacTests.bDone THEN
+                nTotalPassed := nTotalPassed + BodyJacTests.nPassCount;
+                nTotalFailed := nTotalFailed + BodyJacTests.nFailCount;
+                
+                IF BodyJacTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('BodyJac: ', BodyJacTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        18: // Run ExpFromTrans tests
+            sCurrentSuite := 'ExpFromTrans Tests';
+            ExpFromTransTests(bExecute := TRUE);
+            
+            IF ExpFromTransTests.bDone THEN
+                nTotalPassed := nTotalPassed + ExpFromTransTests.nPassCount;
+                nTotalFailed := nTotalFailed + ExpFromTransTests.nFailCount;
+                
+                IF ExpFromTransTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('ExpFromTrans: ', ExpFromTransTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        19: // Run ExpFromRot tests
+            sCurrentSuite := 'ExpFromRot Tests';
+            ExpFromRotTests(bExecute := TRUE);
+            
+            IF ExpFromRotTests.bDone THEN
+                nTotalPassed := nTotalPassed + ExpFromRotTests.nPassCount;
+                nTotalFailed := nTotalFailed + ExpFromRotTests.nFailCount;
+                
+                IF ExpFromRotTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('ExpFromRot: ', ExpFromRotTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        20: // Run RotFromExp tests
+            sCurrentSuite := 'RotFromExp Tests';
+            RotFromExpTests(bExecute := TRUE);
+            
+            IF RotFromExpTests.bDone THEN
+                nTotalPassed := nTotalPassed + RotFromExpTests.nPassCount;
+                nTotalFailed := nTotalFailed + RotFromExpTests.nFailCount;
+                
+                IF RotFromExpTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('RotFromExp: ', RotFromExpTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        21: // Run so3ToAngVel tests
+            sCurrentSuite := 'so3ToAngVel Tests';
+            so3ToAngVelTests(bExecute := TRUE);
+            
+            IF so3ToAngVelTests.bDone THEN
+                nTotalPassed := nTotalPassed + so3ToAngVelTests.nPassCount;
+                nTotalFailed := nTotalFailed + so3ToAngVelTests.nFailCount;
+                
+                IF so3ToAngVelTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('so3ToAngVel: ', so3ToAngVelTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        22: // Run SE3FromSpatVel tests
+            sCurrentSuite := 'SE3FromSpatVel Tests';
+            SE3FromSpatVelTests(bExecute := TRUE);
+            
+            IF SE3FromSpatVelTests.bDone THEN
+                nTotalPassed := nTotalPassed + SE3FromSpatVelTests.nPassCount;
+                nTotalFailed := nTotalFailed + SE3FromSpatVelTests.nFailCount;
+                
+                IF SE3FromSpatVelTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('SE3FromSpatVel: ', SE3FromSpatVelTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        23: // Run TransToRotPos tests
+            sCurrentSuite := 'TransToRotPos Tests';
+            TransToRotPosTests(bExecute := TRUE);
+            
+            IF TransToRotPosTests.bDone THEN
+                nTotalPassed := nTotalPassed + TransToRotPosTests.nPassCount;
+                nTotalFailed := nTotalFailed + TransToRotPosTests.nFailCount;
+                
+                IF TransToRotPosTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('TransToRotPos: ', TransToRotPosTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        24: // Run se3ToSpatVel tests
+            sCurrentSuite := 'se3ToSpatVel Tests';
+            se3ToSpatVelTests(bExecute := TRUE);
+            
+            IF se3ToSpatVelTests.bDone THEN
+                nTotalPassed := nTotalPassed + se3ToSpatVelTests.nPassCount;
+                nTotalFailed := nTotalFailed + se3ToSpatVelTests.nFailCount;
+                
+                IF se3ToSpatVelTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('se3ToSpatVel: ', se3ToSpatVelTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+
+        25: // Run ExpToRotAxisAngle tests
+            sCurrentSuite := 'ExpToRotAxisAngle Tests';
+            ExpToRotAxisAngleTests(bExecute := TRUE);
+            
+            IF ExpToRotAxisAngleTests.bDone THEN
+                nTotalPassed := nTotalPassed + ExpToRotAxisAngleTests.nPassCount;
+                nTotalFailed := nTotalFailed + ExpToRotAxisAngleTests.nFailCount;
+                
+                IF ExpToRotAxisAngleTests.nFailCount > 0 AND sLastError = '' THEN
+                    sLastError := CONCAT('ExpToRotAxisAngle: ', ExpToRotAxisAngleTests.sLastError);
+                END_IF
+                
+                nCurrentSuite := nCurrentSuite + 1;
+            END_IF
+            
+        // --- Completion ---    
+        26: // All tests complete
+            bAllDone := TRUE;
+            sCurrentSuite := '';
+            nCurrentSuite := 0; // Reset for next run
+    END_CASE
+ELSIF NOT bRunTests THEN
+    // Reset state if bRunTests is FALSE
+    bAllDone := FALSE;
+    nTotalPassed := 0;
+    nTotalFailed := 0;
+    sLastError := '';
+    sCurrentSuite := '';
+    nCurrentSuite := 0;
+END_IF 

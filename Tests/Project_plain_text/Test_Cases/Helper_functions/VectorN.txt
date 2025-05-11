@@ -1,0 +1,3 @@
+TYPE VectorN :
+ARRAY[*] OF REAL;
+END_TYPE

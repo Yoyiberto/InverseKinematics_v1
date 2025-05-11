@@ -1,0 +1,55 @@
+FUNCTION_BLOCK transpose_fixed
+VAR_INPUT
+    rowsB: DINT; (* Number of rows in B *)
+    colsB: DINT; (* Number of columns in B *)
+END_VAR
+VAR_IN_OUT
+    B:ARRAY[*,*] OF REAL;  // Input matrix
+    Bt:ARRAY[*,*] OF REAL; // Transposed matrix
+END_VAR
+VAR_OUTPUT
+    Error:STRING;
+    is_valid: BOOL := TRUE;
+END_VAR
+VAR
+    i:DINT;
+    j:DINT;
+    t_rows_check:DINT;
+    t_cols_check:DINT;
+END_VAR
+
+// Initialize outputs
+Error := '';
+is_valid := TRUE;
+
+// Validate input dimensions
+IF rowsB <= 0 OR colsB <= 0 THEN
+    Error := 'Invalid input dimensions rowsB or colsB';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+// Check if the provided VAR_IN_OUT array B is large enough
+IF UPPER_BOUND(B, 1) < rowsB OR UPPER_BOUND(B, 2) < colsB THEN
+    Error := 'Input matrix B array too small for specified dimensions';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+// Get dimensions of output matrix for checking
+t_rows_check := UPPER_BOUND(Bt, 1);
+t_cols_check := UPPER_BOUND(Bt, 2);
+
+// Validate output matrix Bt dimensions against transposed dimensions
+IF t_rows_check < colsB OR t_cols_check < rowsB THEN
+    Error := 'Output matrix Bt too small for transpose';
+    is_valid := FALSE;
+    RETURN;
+END_IF
+
+// Perform transpose operation using specified dimensions
+FOR i := 1 TO rowsB DO
+    FOR j := 1 TO colsB DO
+        Bt[j,i] := B[i,j];
+    END_FOR
+END_FOR
