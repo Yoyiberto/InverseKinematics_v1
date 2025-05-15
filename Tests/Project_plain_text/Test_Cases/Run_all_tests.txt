@@ -1,4 +1,4 @@
-FUNCTION_BLOCK TestFramework
+FUNCTION_BLOCK Run_all_tests
 VAR_INPUT
     bRunTests : BOOL; // Trigger to run all test suites
 END_VAR
@@ -43,7 +43,6 @@ VAR
     se3ToSpatVelTests : se3ToSpatialVelTestSuite;
     ExpToRotAxisAngleTests : expToRotAxisAndAngleTestSuite;
 END_VAR
-
 // Main execution code
 IF bRunTests AND NOT bAllDone THEN
     CASE nCurrentSuite OF
@@ -225,7 +224,6 @@ IF bRunTests AND NOT bAllDone THEN
         12: // Run InvKinBody tests
             sCurrentSuite := 'InvKinBody Tests';
             InvKinBodyTests(bExecute := TRUE);
-            
             IF InvKinBodyTests.bDone THEN
                 nTotalPassed := nTotalPassed + InvKinBodyTests.nPassCount;
                 nTotalFailed := nTotalFailed + InvKinBodyTests.nFailCount;
@@ -236,7 +234,6 @@ IF bRunTests AND NOT bAllDone THEN
                 
                 nCurrentSuite := nCurrentSuite + 1;
             END_IF
-
         13: // Run TransFromExp tests
             sCurrentSuite := 'TransFromExp Tests';
             TransFromExpTests(bExecute := TRUE);
