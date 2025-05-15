@@ -26,7 +26,7 @@ For complete documentation and usage examples, please visit the [KinIn_documenta
 
 ## **3. Prerequisites & Recommended Environment**  
 The recommended environment is CODESYS V3.5 SP20.
-Installation of the OSCAT BASIC 3.4 library is required for the 'KinIn_Test' project. The OSCAT BASIC library package is included in this directory.
+Installation of the OSCAT BASIC 3.3.4 library is required for the 'KinIn_Test' project. The OSCAT BASIC library package is included in this directory.
 For MATLAB, the code requires the Robotics System Toolbox. 
 ## **4. Installation & Setup**  
 ### CODESYS:
