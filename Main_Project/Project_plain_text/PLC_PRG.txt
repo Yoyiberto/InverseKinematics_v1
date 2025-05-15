@@ -1,9 +1,5 @@
-
 PROGRAM PLC_PRG
-
 VAR
-	
-
 	Blist :ARRAY [1..6,1..GVL.nJoints]OF REAL:= [(*it used mm instead of m*)
 	0.00000000E+00,  0.00000000E+00, -3.20510345E-09,  1.00000000E+00,   0.00000000E+00, 
 	0.00000000e+00,  1.00000000e+00, -1.00000000e+00, -3.20510345e-09,   1.00000000e+00, 
@@ -55,18 +51,7 @@ getFwdKinematics_Body_B:getFwdKinematics_Body;
 
 T_FK_A:ARRAY [1..4,1..4] OF REAL;
 T_FK_B:ARRAY [1..4,1..4] OF REAL;
-
-(*========== TESTS  ========*)
-PInvTestSuite:PInvTestSuite;
-		bExecute:BOOL;
 END_VAR	
-
-
-(*=====Examples for the documentation =====*)
-
-//linAlg_Examples();
-//Inverse_examples();
-//Jacobian_example();
 
 (*===== Examples A and B from the paper =====*)
 (*========== Position A ========*)
@@ -103,10 +88,3 @@ getFwdKinematics_Body_B(
 	thetalist:= thetalist_IK_B ,
 	T=> T_FK_B);
 
-(*========== TESTS  ========*)
-PInvTestSuite(
-	bExecute:=bExecute , 
-	bDone=> , 
-	nPassCount=> , 
-	nFailCount=> , 
-	sLastError=> );
