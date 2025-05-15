@@ -1,0 +1,49 @@
+PROGRAM Main_RRR_IK_Example
+VAR CONSTANT
+    PI : LREAL := 3.14159265358979323846; // Definition of PI
+END_VAR
+VAR
+    // Instance of the Inverse Kinematics Function Block
+    ik_calculator : FB_RRR_Inverse_Kinematics;
+
+    // Robot parameters (link lengths a, b, c)
+    robot_link_a : LREAL := 300.0; // e.g., in mm
+    robot_link_b : LREAL := 250.0; // e.g., in mm
+    robot_link_c : LREAL := 100.0; // e.g., in mm
+
+    // Target for the end-effector
+    target_pos_x : LREAL := 400.0; 
+    target_pos_y : LREAL := 150.0; 
+    target_orientation_phi : LREAL := PI / 4.0; // Target orientation: 45 degrees (PI/4 radians)
+                                               // Assumes PI is defined (e.g. via a library or CONSTANT PI : LREAL := 3.1415926535;)
+    
+    // Choice for elbow configuration for the 2-link sub-problem
+    choose_elbow_up_solution : BOOL := TRUE;
+
+    // Outputs from the IK calculation
+    calculated_q1 : LREAL;
+    calculated_q2 : LREAL;
+    calculated_q3 : LREAL;
+    target_is_reachable : BOOL;
+    
+
+END_VAR
+//Average cycle time can be seen in Task2
+// IF bExecuteIK THEN // For a one-shot calculation, or remove for continuous calculation
+    ik_calculator(
+        Px_target    := target_pos_x,
+        Py_target    := target_pos_y,
+        Phi_target   := target_orientation_phi,
+        link_a       := robot_link_a,
+        link_b       := robot_link_b,
+        link_c       := robot_link_c,
+        Elbow_Up     := choose_elbow_up_solution
+    );
+
+    // Retrieve the results from the Function Block instance
+    calculated_q1 := ik_calculator.q1;
+    calculated_q2 := ik_calculator.q2;
+    calculated_q3 := ik_calculator.q3;
+    target_is_reachable := ik_calculator.is_reachable;
+
+
