@@ -1,0 +1,18 @@
+FUNCTION_BLOCK isValueNegligible
+VAR_IN_OUT
+	nearArray:ARRAY [*] OF REAL;//scalar
+END_VAR
+
+VAR_OUTPUT
+	judge:INT;
+END_VAR
+VAR
+	norm:norm;
+	normVal:REAL;
+END_VAR
+norm(vector:= nearArray, normValue=> normVal);
+IF normVal< 0.0000001 THEN
+	judge:=1;
+ELSE
+	judge:=0;
+END_IF
