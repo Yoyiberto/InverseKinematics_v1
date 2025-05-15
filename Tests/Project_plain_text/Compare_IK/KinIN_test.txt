@@ -1,0 +1,41 @@
+PROGRAM KinIN_test
+VAR
+	(*========= indv test==========*)
+Blist_ : ARRAY [1..6, 1..3] OF REAL :=
+    [0, 0, 0,
+     0, 0, 0,
+     -1, 0, 1,
+     2, 0, 0,
+     0, 1, 0,
+     0, 0, 0.1];
+
+M_ : ARRAY [1..4, 1..4] OF REAL :=
+    [-1, 0, 0, 0,
+     0, 1, 0, 6,
+     0, 0, -1, 2,
+     0, 0, 0, 1];
+
+T_matrix : ARRAY [1..4, 1..4] OF REAL := // Renamed from T to avoid conflict with potential T (Time) type
+    [0, 1, 0, -5,
+     1, 0, 0, 4,
+     0, 0, -1, 1.6858,
+     0, 0, 0, 1];
+	 
+thetalist0_:ARRAY [1..3] OF REAL:= [1.5, 2.5, 3];
+        eomg_ :REAL:= 0.1;
+        ev_ :REAL:= 0.01;
+thetalist_:ARRAY [1..3] OF REAL;
+		getInvKinematics_Body:getInvKinematics_Body;
+
+END_VAR
+//checks the average cycle time in KinIn_IK task
+getInvKinematics_Body(
+	M:=M_ , 
+	T:=T_matrix , 
+	eomg:=eomg_ , 
+	ev:=ev_ , 
+	Blist:= Blist_, 
+	thetalist0:=thetalist0_ , 
+	thetalist:=thetalist_ , 
+	success=> , 
+	Error=> );
