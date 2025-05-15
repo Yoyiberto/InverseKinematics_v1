@@ -5,6 +5,8 @@ KinIn is a framework for iterative kinematic analysis of mechanical systems. It 
 
 This repository contains the framework files in Structured Text. The MATLAB directory includes a complementary example for better visualization and exploration of the mechanism.
 This repository is organized into four main directories: Main_project, Matlab, RaspberryPi, and Tests.
+
+
 The Tests directory contains test suites and examples for all functions, including comparisons with common manual inverse kinematics calculations. 
 The Main_project directory contains only the primary project. The PLC_PRG executes inverse and forward kinematics calculations for positions A and B as described in the paper.
 The RaspberryPi directory houses a specialized Raspberry Pi project that closely resembles the main project.
