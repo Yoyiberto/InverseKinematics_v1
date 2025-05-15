@@ -2,20 +2,9 @@
 VAR_GLOBAL
 END_VAR
 VAR_GLOBAL CONSTANT
-	MAX_INV_SIZE:INT:=7;
 	nJoints:INT:=5;
-	
-	pInv_dim1:INT:=6;//it is always 6dim because 3rot+3linear
+	MAX_INV_SIZE:INT:=nJoints;
 	pInv_dim2:INT:=nJoints;
-	nInvSize:INT:=pInv_dim2;
-	
-	ar_JointLimits:ARRAY [1..GVL.nJoints,1..2] OF REAL:=
-		[-30 *3.1415/180	,	30* 3.1415/180,
-		-34  *3.1415/180	,	30.5  *3.1415/180,
-		0 					,		1,
-		-35  *3.1415/180		,	35  *3.1415/180,
-		-42.1  *3.1415/180	,	9.3  *3.1415/180];
-
 	MAX_JOINTS:INT:=MAX_INV_SIZE;
 
 END_VAR
